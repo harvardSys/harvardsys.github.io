@@ -1,0 +1,28 @@
+<div class="text-sm antialiased" style="display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem 1rem;">
+  {{- $datetime := default .Date .Params.eventTime -}}
+  {{- if $datetime -}}
+  <span style="display:inline-flex; align-items:center; gap:0.25rem;">
+    <span class="material-icons-outlined" style="font-size:1rem; line-height:1;">event</span>
+    <time id="event-date-{{ $datetime | time.Format "20060102" }}">
+      {{- if .Params.eventTime -}}
+          {{- $datetime | time.Format "Jan 2, 2006 3:04 PM" -}}
+      {{- else -}}
+          {{- $datetime | time.Format ":date_medium" -}}
+      {{- end -}}
+    </time>
+  </span>
+  {{- end -}}
+  {{- if .Params.location -}}
+  <span style="display:inline-flex; align-items:center; gap:0.25rem;">
+    <span class="material-icons-outlined" style="font-size:1rem; line-height:1;">location_on</span>
+    <span>{{- .Params.location -}}</span>
+  </span>
+  {{- end -}}
+  {{- $single_author := or .Params.author .Params.speaker site.Params.author -}}
+  {{- if $single_author -}}
+  <span style="display:inline-flex; align-items:center; gap:0.25rem;">
+    <span class="material-icons-outlined" style="font-size:1rem; line-height:1;">person</span>
+    <span>{{- $single_author -}}</span>
+  </span>
+  {{- end -}}
+</div>
