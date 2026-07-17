@@ -2,7 +2,7 @@
 
   <h1 class="mb-8">{{ .Title }}</h1>
 
-{{- $people := .Site.Data.people -}}
+{{- $people := hugo.Data.people -}}
 {{- $section_order := slice "Directors" "Faculty" "Postdocs" "PhD Students" -}}
 
 {{- range $section_order -}}
