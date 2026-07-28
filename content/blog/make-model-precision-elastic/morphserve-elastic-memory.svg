@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
+  <title id="title">MorphServe reshapes GPU memory as workload pressure changes</title>
+  <desc id="desc">Three stages show a GPU under quiet load, a traffic spike, and recovery. During the spike, selected model layers shrink from FP16 to INT4 and the freed memory becomes KV cache capacity. Full precision returns after the spike.</desc>
+  <style>
+    .bg { fill: #f2f0e9; }
+    .panel { fill: #e9e6dc; stroke: #cbc8bc; }
+    .ink { fill: #171816; }
+    .muted { fill: #66665f; }
+    .line { stroke: #77756e; }
+    .weights { fill: #1a2525; }
+    .quant { fill: #e8502c; }
+    .cache { fill: #2d7a6c; }
+    .free { fill: #d4d0c4; }
+    .signal-line { stroke: #e8502c; }
+    text { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #141716; }
+      .panel { fill: #1d211f; stroke: #393c38; }
+      .ink { fill: #efeee8; }
+      .muted { fill: #aaa9a1; }
+      .line { stroke: #9a9d98; }
+      .weights { fill: #d8ddd8; }
+      .quant { fill: #ff6841; }
+      .cache { fill: #5fc6a9; }
+      .free { fill: #343a36; }
+      .signal-line { stroke: #ff6841; }
+    }
+  </style>
+
+  <rect class="bg" width="960" height="560"/>
+  <text class="ink" x="52" y="58" font-size="32" font-weight="650">One GPU, three shapes</text>
+  <text class="muted" x="52" y="88" font-size="15">Model precision becomes an elastic reserve for the KV cache.</text>
+
+  <text class="muted" x="76" y="137" font-size="11" font-weight="700" letter-spacing="1.2">QUIET LOAD</text>
+  <text class="quant" x="374" y="137" font-size="11" font-weight="700" letter-spacing="1.2">TRAFFIC SPIKE</text>
+  <text class="muted" x="672" y="137" font-size="11" font-weight="700" letter-spacing="1.2">PRESSURE FALLS</text>
+
+  <rect class="panel" x="52" y="160" width="260" height="302" rx="2"/>
+  <text class="ink" x="76" y="195" font-size="17" font-weight="700">1 · Quiet</text>
+  <text class="muted" x="76" y="219" font-size="13">Maximize generation quality</text>
+  <rect class="weights" x="76" y="249" width="212" height="110" rx="1"/>
+  <rect class="cache" x="76" y="359" width="212" height="54" rx="1"/>
+  <rect class="free" x="76" y="413" width="212" height="25" rx="1"/>
+  <text x="92" y="307" font-size="14" font-weight="700" fill="#f2f0e9">FP16 model weights</text>
+  <text x="92" y="391" font-size="14" font-weight="700" fill="#f2f0e9">KV cache</text>
+  <text class="muted" x="92" y="431" font-size="11" font-weight="700">HEADROOM</text>
+
+  <rect class="panel" x="350" y="160" width="260" height="302" rx="2"/>
+  <text class="ink" x="374" y="195" font-size="17" font-weight="700">2 · Pressure</text>
+  <text class="muted" x="374" y="219" font-size="13">Trade a little precision for capacity</text>
+  <rect class="weights" x="374" y="249" width="212" height="60" rx="1"/>
+  <rect class="quant" x="374" y="309" width="212" height="37" rx="1"/>
+  <rect class="cache" x="374" y="346" width="212" height="92" rx="1"/>
+  <text x="390" y="284" font-size="14" font-weight="700" fill="#f2f0e9">FP16 layers</text>
+  <text x="390" y="333" font-size="13" font-weight="700" fill="#ffffff">Selected W4 layers</text>
+  <text x="390" y="395" font-size="14" font-weight="700" fill="#f2f0e9">Expanded KV cache</text>
+  <text class="quant" x="374" y="239" font-size="11" font-weight="700">75% less memory per W4 layer</text>
+
+  <rect class="panel" x="648" y="160" width="260" height="302" rx="2"/>
+  <text class="ink" x="672" y="195" font-size="17" font-weight="700">3 · Recovery</text>
+  <text class="muted" x="672" y="219" font-size="13">Return to full precision</text>
+  <rect class="weights" x="672" y="249" width="212" height="110" rx="1"/>
+  <rect class="cache" x="672" y="359" width="212" height="54" rx="1"/>
+  <rect class="free" x="672" y="413" width="212" height="25" rx="1"/>
+  <text x="688" y="307" font-size="14" font-weight="700" fill="#f2f0e9">FP16 model weights</text>
+  <text x="688" y="391" font-size="14" font-weight="700" fill="#f2f0e9">KV cache</text>
+  <text class="muted" x="688" y="431" font-size="11" font-weight="700">HEADROOM</text>
+
+  <rect class="weights" x="52" y="504" width="17" height="4"/>
+  <text class="muted" x="79" y="511" font-size="12">Full-precision weights</text>
+  <rect class="quant" x="246" y="504" width="17" height="4"/>
+  <text class="muted" x="273" y="511" font-size="12">Quantized layers</text>
+  <rect class="cache" x="411" y="504" width="17" height="4"/>
+  <text class="muted" x="438" y="511" font-size="12">KV cache blocks</text>
+  <text class="muted" x="649" y="511" font-size="12">No restart · no re-prefill · token-level transition</text>
+</svg>
