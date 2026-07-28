@@ -1,5 +1,5 @@
 +++
-title = 'Make model precision elastic'
+title = 'MorphServe: Making Model Precision Elastic for Bursty LLM Serving'
 date = 2026-05-24T00:00:00-04:00
 author = 'Juncheng Yang'
 draft = false
