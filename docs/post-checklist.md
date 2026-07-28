@@ -2,8 +2,9 @@
 
 This checklist is meant to be used before publishing a post. It ensures that the post meets certain quality and formatting standards.
 
-- [ ] **Content quality**: Check if there is no TODOs, placesholders, typos or grammar mistakes.
+- [ ] **Content quality**: Check that there are no TODOs, placeholders, typos or grammar mistakes.
 - [ ] **Title**: Ensure `title` field in front matter is the desired title.
+- [ ] **Author**: Set the `author` field to your full name. For the full author card (photo, title, links), match the spelling of your entry in `data/people.yaml`.
 - [ ] **Date** - Set `date` to current or past date (future dates won't render). The format should be `YYYY-MM-DDTHH:MM:SS±HH:MM`.
 - [ ] **Draft is false**: Change `draft = true` to `draft = false` before publishing.
 - [ ] **Tags are relevant**: Add appropriate tags using `tags = ['tag1', 'tag2']` format.
