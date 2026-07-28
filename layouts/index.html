@@ -4,16 +4,16 @@
   <h2>Upcoming and Recent Seminars</h2>
   {{ range first 3 (where site.RegularPages "Section" "seminar") }}
     <h3 class="mb-0"><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
-    {{ partial "date-people.html" . }}
-    <div class="not-prose">{{ .Summary }}</div>
+    <div style="margin-top:0.5rem;">{{ partial "date-people.html" . }}</div>
+    <div class="not-prose" style="margin-top:0.5rem;">{{ .Summary }}</div>
     <p class="mt-1.5"><a class="link block" href="{{ .Permalink }}">Read more →</a></p>
   {{ end }}
   <hr>
   <h2>Recent Posts</h2>
   {{ range first 5 (where site.RegularPages "Section" "blog") }}
     <h3 class="mb-0"><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
-    {{ partial "date-people.html" . }}
-    <div class="not-prose">{{ .Summary }}</div>
+    <div style="margin-top:0.5rem;">{{ partial "date-people.html" . }}</div>
+    <div class="not-prose" style="margin-top:0.5rem;">{{ .Summary }}</div>
     <p class="mt-1.5"><a class="link block" href="{{ .Permalink }}">Read more →</a></p>
   {{ end }}
 {{ end }}
