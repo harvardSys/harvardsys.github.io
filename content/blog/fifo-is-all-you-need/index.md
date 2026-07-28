@@ -1,6 +1,6 @@
 +++
 title = 'Why FIFO is (almost) all you need for cache eviction'
-date = 2026-05-20T00:00:00-04:00
+date = 2026-07-28T11:00:00-04:00
 author = 'Juncheng Yang'
 draft = false
 tags = ['caching', 'systems', 'cache-eviction', 'FIFO', 'S3-FIFO', 'SIEVE']

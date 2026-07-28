@@ -3,13 +3,13 @@
   {{- if $datetime -}}
   <span style="display:inline-flex; align-items:center; gap:0.25rem;">
     <span class="material-icons-outlined" style="font-size:1rem; line-height:1;">event</span>
+    {{- if .Params.eventTime -}}
     <time id="event-date-{{ $datetime | time.Format "20060102" }}">
-      {{- if .Params.eventTime -}}
-          {{- $datetime | time.Format "Jan 2, 2006 3:04 PM" -}}
-      {{- else -}}
-          {{- $datetime | time.Format ":date_medium" -}}
-      {{- end -}}
+      {{- $datetime | time.Format "Jan 2, 2006 3:04 PM" -}}
     </time>
+    {{- else -}}
+    <time>{{- $datetime | time.Format ":date_medium" -}}</time>
+    {{- end -}}
   </span>
   {{- end -}}
   {{- if .Params.location -}}
