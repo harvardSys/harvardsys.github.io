@@ -8,21 +8,21 @@ To add a new blog post, it is recommended to create a new branch from the `maste
 
 Hugo provides a simple way to create new blog posts using templates.
 
-Depending on the content, if you
-1. want to creat a blog post with figures, it is recommended to use: (replace `[post-name]` with your desired post name)
+Blog posts live in the `blog/` section (`content/blog/`). Depending on the content, if you
+1. want to create a blog post with figures, it is recommended to use: (replace `[post-name]` with your desired post name)
 
    ```bash
-   hugo new content posts/[post-name]/index.md
+   hugo new content blog/[post-name]/index.md
    ```
-2. want to create a blog post without any supplymentary files, you can use: (replace `[post-name]` with your desired post name)
+2. want to create a blog post without any supplementary files, you can use: (replace `[post-name]` with your desired post name)
 
    ```bash
-   hugo new posts/[post-name].md
+   hugo new blog/[post-name].md
    ```
 
 In both cases, a markdown file will be created and include some metadata in the front matter.
 
-For example, if I run `hugo new content posts/first-post/index.md`, the file `content/posts/first-post/index.md` will be created with the following content:
+For example, if I run `hugo new content blog/first-post/index.md`, the file `content/blog/first-post/index.md` will be created with the following content:
 
 ```markdown
 +++
@@ -49,23 +49,33 @@ Follow the following guide:
 2. (Optional) change the `date` and `title` fields to your desired values.
 
    **Note: hugo will skip rendering posts with `date` set in the future.** So make sure to set the `date` field to the current date or a past date if you want to view the post.
-3. If you want to view the post before publishing, run hugo server with `--buildDrafts` flag:
+3. Set the author. Add an `author` field to the front matter with your full name:
+
+   ```markdown
+   +++
+   ...
+   author = 'Your Full Name'
+   +++
+   ```
+
+   The author name is shown in the byline below the title, and an author card is rendered at the end of the post. If the name exactly matches an entry in `data/people.yaml`, the card automatically pulls in that person's photo, title, website, and email; otherwise it shows the name only. To get the richer card, use the same spelling as your entry in `data/people.yaml` (add yourself there first if you are not listed).
+4. If you want to view the post before publishing, run hugo server with `--buildDrafts` flag:
 
    ```bash
    hugo server --buildDrafts
    ```
 
-   After running the command, the hugo server will be started, All saved modifications will be monitored and reflected immediately and automatically. You can view the post at `http://localhost:1313/posts/[post-name]/`.
+   After running the command, the hugo server will be started, All saved modifications will be monitored and reflected immediately and automatically. You can view the post at `http://localhost:1313/blog/[post-name]/`.
    
    > Note: If you don't want to view draft posts, you can simply run `hugo server` without the `--buildDrafts` flag.
-4. Start writing your content in markdown format below the front matter.
+5. Start writing your content in markdown format below the front matter.
 
    For figures, it is recommended to place them in the same directory as the markdown file. Svg (for diagrams) and webp (for photos) are preferred formats. You can reference the figures in markdown as follows:
 
    ```markdown
     ![Alt text](figure-name.webp "title")
     ```
-5. Once you are satisfied with the post, do the [post checklist](post-checklist.md). After completing the checklist, change the `draft` field to `false` in the front matter:
+6. Once you are satisfied with the post, do the [post checklist](post-checklist.md). After completing the checklist, change the `draft` field to `false` in the front matter:
 
    ```markdown
    +++
