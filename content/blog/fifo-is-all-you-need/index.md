@@ -89,7 +89,7 @@ decision matters.
 
 This idea produced two related algorithms:
 [S3-FIFO](https://dl.acm.org/doi/10.1145/3600006.3613147)[^s3fifo] and
-[SIEVE](https://www.usenix.org/system/files/nsdi24-zhang-yazhuo.pdf)[^sieve].
+[SIEVE](https://www.usenix.org/system/files/nsdi24-zhang-yazhuo.pdf).[^sieve]
 They share the same workload insight, but spend their second chance
 differently.
 
