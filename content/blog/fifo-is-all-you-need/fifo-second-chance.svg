@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" role="img" aria-label="A FIFO queue giving each object one second chance: objects enter at the head, and an eviction scan from the tail keeps reused objects while dropping objects that were never requested again">
+<style>
+  .ink-1 { fill: #171816; }
+  .ink-2 { fill: #52514e; }
+  .muted { fill: #898781; }
+  .box   { fill: #e9e6dc; stroke: #cbc8bc; stroke-width: 1.5; }
+  .ring  { fill: none; stroke: #898781; stroke-width: 2.2; }
+  .chk   { stroke: #ffffff; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .s1 { stroke: #2a78d6; } .f1 { fill: #2a78d6; }
+  .s2 { stroke: #1baf7a; } .f2 { fill: #1baf7a; }
+  .s4 { stroke: #e8502c; } .f4 { fill: #e8502c; }
+  .smut { stroke: #898781; }
+  text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  @media (prefers-color-scheme: dark) {
+    .ink-1 { fill: #efeee8; }
+    .ink-2 { fill: #c3c2b7; }
+    .muted { fill: #8f8e87; }
+    .box   { fill: #1d211f; stroke: #393c38; }
+    .ring  { stroke: #8f8e87; }
+    .s1 { stroke: #3987e5; } .f1 { fill: #3987e5; }
+    .s2 { stroke: #199e70; } .f2 { fill: #199e70; }
+    .s4 { stroke: #ff6841; } .f4 { fill: #ff6841; }
+    .smut { stroke: #8f8e87; }
+  }
+</style>
+<defs>
+  <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f1"/></marker>
+  <marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f4"/></marker>
+  <marker id="ah-scan" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="muted"/></marker>
+</defs>
+
+<text x="20" y="28" font-size="16" font-weight="600" class="ink-1">One FIFO queue, one second chance</text>
+<text x="20" y="48" font-size="12.5" class="ink-2">Objects enter at the head; an eviction scan from the tail keeps the reused and drops the one-hit.</text>
+
+<!-- insertion arrow -->
+<line x1="44" y1="171" x2="156" y2="171" class="s1" stroke-width="2.5" marker-end="url(#ah-blue)"/>
+<text x="100" y="132" font-size="12" font-weight="600" text-anchor="middle" class="f1">new object</text>
+<text x="100" y="205" font-size="11.5" text-anchor="middle" class="muted">head (newest)</text>
+
+<!-- queue boxes: centers at 202 276 350 424 498 572, top 140 h 62 -->
+<rect x="170" y="140" width="64" height="62" rx="7" class="box"/>
+<rect x="244" y="140" width="64" height="62" rx="7" class="box"/>
+<rect x="318" y="140" width="64" height="62" rx="7" class="box"/>
+<rect x="392" y="140" width="64" height="62" rx="7" class="box"/>
+<rect x="466" y="140" width="64" height="62" rx="7" class="box"/>
+<rect x="540" y="140" width="64" height="62" rx="7" class="box"/>
+
+<!-- reuse markers: hollow = one-hit, filled green + check = requested again -->
+<circle cx="202" cy="171" r="11" class="ring"/>
+<circle cx="276" cy="171" r="11" class="f2"/><path d="M271,171 L274.5,175 L281,167" class="chk"/>
+<circle cx="350" cy="171" r="11" class="ring"/>
+<circle cx="424" cy="171" r="11" class="ring"/>
+<circle cx="498" cy="171" r="11" class="f2"/><path d="M493,171 L496.5,175 L503,167" class="chk"/>
+<circle cx="572" cy="171" r="11" class="ring"/>
+
+<text x="572" y="205" font-size="11.5" text-anchor="middle" class="muted">tail (oldest)</text>
+
+<!-- eviction arrow off the tail -->
+<line x1="612" y1="171" x2="702" y2="171" class="s4" stroke-width="2.5" marker-end="url(#ah-red)"/>
+<circle cx="726" cy="171" r="11" class="ring" opacity="0.55"/>
+<text x="690" y="140" font-size="12" font-weight="600" text-anchor="middle" class="f4">evict</text>
+<text x="690" y="205" font-size="11" text-anchor="middle" class="muted">never reused</text>
+
+<!-- scan sweep from the tail toward the head -->
+<line x1="600" y1="232" x2="182" y2="232" class="smut" stroke-width="1.8" stroke-dasharray="5 5" marker-end="url(#ah-scan)"/>
+<text x="391" y="252" font-size="11.5" text-anchor="middle" class="muted">eviction scan sweeps from the tail, clearing the marker on each reused object it passes</text>
+
+<!-- legend -->
+<circle cx="212" cy="290" r="9" class="f2"/><path d="M207.5,290 L211,293.5 L217,286.5" class="chk"/>
+<text x="230" y="294" font-size="12" class="ink-2">requested again since insertion &#8212; survives, marker reset</text>
+<circle cx="212" cy="316" r="9" class="ring"/>
+<text x="230" y="320" font-size="12" class="ink-2">never requested again &#8212; evicted on the scan</text>
+</svg>
