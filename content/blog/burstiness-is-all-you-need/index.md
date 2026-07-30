@@ -5,6 +5,8 @@ title = 'When Bursty Traffic Makes LLM Inference Faster'
 author = 'Akira van de Groenendaal'
 tags = ['LLM', 'systems', 'serving']
 summary = 'Bursty arrivals usually cause a drop in performance and are seen as headaches in production systems. In this blog, we investigate a phenomenon where burstiness actually improves performance, uncovering what conditions produce this effect.'
+bio = 'Akira van de Groenendaal is a senior studying Computer Science at Carnegie Mellon University, currently doing research with the Harvard Systems Group under Prof. Juncheng Yang. He works on ML systems, with interests in workload analysis and the queueing dynamics of LLM inference.'
+tldr = 'Burstier arrivals made LLM inference faster in my benchmarks, contradicting standard intuition—burstiness separates decode tokens from heavy prefills, reducing interference. However, that interference is largely attributable to a kernel optimization artifact, and the benefits of burstiness only appear when mixed batches are inefficient.'
 +++
 
 ## Introduction
