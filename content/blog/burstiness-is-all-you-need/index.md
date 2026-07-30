@@ -1,7 +1,7 @@
 +++
 date = '2026-07-30T14:34:12-04:00'
 draft = false
-title = 'When bursty traffic makes LLM inference faster'
+title = 'When Bursty Traffic Makes LLM Inference Faster'
 author = 'Akira van de Groenendaal'
 tags = ['LLM', 'systems', 'serving']
 summary = 'Bursty arrivals usually cause a drop in performance and are seen as headaches in production systems. In this blog, we investigate a phenomenon where burstiness actually improves performance, uncovering what conditions produce this effect.'
