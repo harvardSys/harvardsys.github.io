@@ -1,5 +1,5 @@
 +++
-title = 'Why FIFO is (almost) all you need for cache eviction'
+title = 'Why FIFO Is (Almost) All You Need for Cache Eviction'
 date = 2026-07-28T11:00:00-04:00
 author = 'Juncheng Yang'
 draft = false
