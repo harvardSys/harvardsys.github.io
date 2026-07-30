@@ -12,6 +12,11 @@
 
     {{- end -}}
   </header>
+  {{ with .Params.tldr -}}
+  <div class="mb-8 rounded-xl bg-black/[3%] p-3 px-5 dark:bg-white/[8%]">
+    <strong>TL;DR:</strong> {{ . | markdownify }}
+  </div>
+  {{- end }}
   {{ if .Params.showToc -}}
   <div class="toc">
     <h2>Table of Contents</h2>

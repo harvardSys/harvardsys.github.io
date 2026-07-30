@@ -59,7 +59,27 @@ Follow the following guide:
    ```
 
    The author name is shown in the byline below the title, and an author card is rendered at the end of the post. If the name exactly matches an entry in `data/people.yaml`, the card automatically pulls in that person's photo, title, website, and email; otherwise it shows the name only. To get the richer card, use the same spelling as your entry in `data/people.yaml` (add yourself there first if you are not listed).
-4. If you want to view the post before publishing, run hugo server with `--buildDrafts` flag:
+4. (Optional) Add a short author bio, shown in the author card at the end of the post:
+
+   ```markdown
+   +++
+   ...
+   bio = 'One or two sentences about yourself.'
+   +++
+   ```
+
+   If omitted, the card falls back to the `bio` field of your entry in `data/people.yaml` (if present); a `bio` in the post front matter overrides the one in `data/people.yaml`. Inline markdown (links, emphasis) is supported.
+5. (Optional) Add a TL;DR, rendered in a highlighted box at the top of the post, before the table of contents:
+
+   ```markdown
+   +++
+   ...
+   tldr = 'A few sentences summarizing the key takeaways of the post.'
+   +++
+   ```
+
+   Inline markdown is supported here as well.
+6. If you want to view the post before publishing, run hugo server with `--buildDrafts` flag:
 
    ```bash
    hugo server --buildDrafts
@@ -68,14 +88,14 @@ Follow the following guide:
    After running the command, the hugo server will be started, All saved modifications will be monitored and reflected immediately and automatically. You can view the post at `http://localhost:1313/blog/[post-name]/`.
    
    > Note: If you don't want to view draft posts, you can simply run `hugo server` without the `--buildDrafts` flag.
-5. Start writing your content in markdown format below the front matter.
+7. Start writing your content in markdown format below the front matter.
 
    For figures, it is recommended to place them in the same directory as the markdown file. Svg (for diagrams) and webp (for photos) are preferred formats. You can reference the figures in markdown as follows:
 
    ```markdown
     ![Alt text](figure-name.webp "title")
     ```
-6. Once you are satisfied with the post, do the [post checklist](post-checklist.md). After completing the checklist, change the `draft` field to `false` in the front matter:
+8. Once you are satisfied with the post, do the [post checklist](post-checklist.md). After completing the checklist, change the `draft` field to `false` in the front matter:
 
    ```markdown
    +++

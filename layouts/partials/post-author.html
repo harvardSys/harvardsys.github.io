@@ -1,11 +1,15 @@
 {{- /* Renders an author bio card at the end of a post, sourced from data/people.yaml.
-       Matches .Params.author (fallback: site author) against people entries by name. */ -}}
+       Matches .Params.author (fallback: site author) against people entries by name.
+       A short bio comes from the post's `bio` front-matter field, falling back to a
+       `bio` field on the matched people.yaml entry. */ -}}
 {{- $authorName := or .Params.author site.Params.author -}}
 {{- if $authorName -}}
 {{- $person := "" -}}
 {{- range hugo.Data.people -}}
   {{- if eq .name $authorName -}}{{- $person = . -}}{{- end -}}
 {{- end -}}
+{{- $bio := .Params.bio -}}
+{{- if not $bio -}}{{- with $person -}}{{- $bio = .bio -}}{{- end -}}{{- end -}}
 <aside class="post-author" style="margin-top:3rem; padding-top:1.5rem; border-top:1px solid rgba(0,0,0,0.1); display:flex; align-items:center; gap:1rem;">
   {{- with $person -}}
     {{- with .image -}}
@@ -24,11 +28,17 @@
         {{- with .email -}}<a href="mailto:{{ . }}">{{ . }}</a>{{- end -}}
       </div>
       {{- end -}}
+      {{- with $bio -}}
+      <div style="font-size:0.9rem; opacity:0.85; margin-top:0.25rem;">{{ . | markdownify }}</div>
+      {{- end -}}
     </div>
   {{- else -}}
     <div style="line-height:1.45;">
       <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; opacity:0.6;">Author</div>
       <div style="font-weight:600;">{{ $authorName }}</div>
+      {{- with $bio -}}
+      <div style="font-size:0.9rem; opacity:0.85; margin-top:0.25rem;">{{ . | markdownify }}</div>
+      {{- end -}}
     </div>
   {{- end -}}
 </aside>
