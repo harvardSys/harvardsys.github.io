@@ -331,3 +331,10 @@
   email: "weiteting@g.harvard.edu"
   advisor:
     - "H.T. Kung"
+- name: "Akira van de Groenendaal"
+  title: "Intern"
+  role: "Interns"
+  image: "/images/people/akira-van-de-groenendaal.jpg"
+  email: "avdg@cmu.edu"
+  advisor:
+    - "Juncheng Yang"
