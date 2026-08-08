@@ -125,6 +125,13 @@
   email: "yunjia_zheng@g.harvard.edu"
   advisor:
     - "Juncheng Yang"
+- name: "William Nixon"
+  title: "PhD Student"
+  role: "PhD Students"
+  image: "/images/people/william-nixon.jpeg"
+  website: "https://williamnixon20.github.io/"
+  advisor:
+    - "Juncheng Yang"
 - name: "Varun Gandhi"
   title: "PhD Student"
   role: "PhD Students"
