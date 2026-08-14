@@ -1,10 +1,9 @@
 +++
 title = 'Learning-Augmented Heuristics: A Different Way to Build Smart Caches'
-date = 2026-08-08T00:00:00-05:00
+date = 2026-08-14T00:00:00-05:00
 author = 'William Nixon'
-draft = true
+draft = false
 tags = ['caching', 'systems', 'machine-learning', 'S3-FIFO']
-showToc = true
 summary = 'Smart cache eviction algorithms can adapt to workloads, but they often pay for it with complexity, instability, or overhead. Learning-Augmented Heuristics takes a different approach: keep the fast heuristic on the data path, and use learning to configure it at a slower timescale.'
 bio = 'William is a 2nd-year PhD student in Computer Science at the University of Chicago, advised by Prof. Haryadi S. Gunawi and Prof. Juncheng Yang. He works on systems and machine learning, with a focus on caching and storage.'
 +++
