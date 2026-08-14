@@ -128,7 +128,7 @@
 - name: "William Nixon"
   title: "PhD Student"
   role: "PhD Students"
-  image: "/images/people/william-nixon.jpeg"
+  image: "/images/people/william-nixon.jpg"
   website: "https://williamnixon20.github.io/"
   advisor:
     - "Juncheng Yang"
