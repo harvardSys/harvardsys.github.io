@@ -37,3 +37,9 @@ hugo.linux
 
 # Temporary files
 tmp/
+
+# Node.js
+node_modules/
+
+# Cloudflare Wrangler
+.wrangler/
