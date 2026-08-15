@@ -12,16 +12,20 @@ on:
   push:
     branches: ["**"]
 
-  # Also run when a PR is opened/reopened so the preview comment appears even if
-  # the branch was pushed before the PR existed.
+  # Only to catch up a PR opened on a branch that was already pushed. New
+  # commits are handled by the push event above, so `synchronize` is
+  # deliberately absent: it would just duplicate every run.
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened]
 
   workflow_dispatch:
 
 permissions:
   contents: read
   pull-requests: write
+  # PR conversation comments are issue comments, and the issues API checks the
+  # `issues` scope even when the target is a pull request.
+  issues: write
 
 # One preview per branch; a newer push supersedes an in-flight run.
 concurrency:
@@ -48,7 +52,9 @@ jobs:
     env:
       # Keep in sync with .github/workflows/deploy.yml so previews match production.
       HUGO_VERSION: 0.164.0
-      WRANGLER_VERSION: "4"
+      # Pinned exactly, like HUGO_VERSION: a 4.x bump could change wrangler's
+      # output format and break the preview URL parsing below.
+      WRANGLER_VERSION: 4.123.0
       WORKER_NAME: harvardsys-preview
       # The commit actually built (see the checkout step).
       BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
