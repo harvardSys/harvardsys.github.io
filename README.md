@@ -29,3 +29,11 @@ To set up the website locally, follow these steps:
 ## Adding New Posts
 
 To create and manage blog posts, please refer to the [New Post Guide](docs/new-post.md).
+
+## Previewing Changes
+
+Every branch pushed to this repository is published to a Cloudflare Worker so it
+can be reviewed in a browser before merging. Pull requests get a comment linking
+to their preview, which is rebuilt on every push. See the
+[Preview Deployments guide](docs/preview-deployments.md) for the URLs, the
+one-time setup, and how a preview differs from production.

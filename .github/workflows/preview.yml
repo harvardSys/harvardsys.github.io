@@ -1,0 +1,268 @@
+# Publishes a preview build of the site to Cloudflare Workers for every branch,
+# and comments the preview URL on any open pull request for that branch.
+#
+# Production is unaffected: it continues to build and deploy from `master` to
+# GitHub Pages via .github/workflows/deploy.yml.
+#
+# Setup (two repository secrets) is documented in docs/preview-deployments.md.
+name: Preview site on Cloudflare Workers
+
+on:
+  # Every branch gets a preview, whether or not it has a pull request yet.
+  push:
+    branches: ["**"]
+
+  # Also run when a PR is opened/reopened so the preview comment appears even if
+  # the branch was pushed before the PR existed.
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# One preview per branch; a newer push supersedes an in-flight run.
+concurrency:
+  group: preview-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  preview:
+    name: Build and publish preview
+    runs-on: ubuntu-latest
+
+    # Skip deleted branches, and skip pull requests from forks: those cannot
+    # read repository secrets, so there is no way to authenticate to Cloudflare.
+    # The push event covers every branch in this repository.
+    if: >-
+      !github.event.deleted &&
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+
+    env:
+      # Keep in sync with .github/workflows/deploy.yml so previews match production.
+      HUGO_VERSION: 0.164.0
+      WRANGLER_VERSION: "4"
+      WORKER_NAME: harvardsys-preview
+      # The commit actually built (see the checkout step).
+      BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Check Cloudflare credentials
+        id: guard
+        run: |
+          if [[ -z "${CLOUDFLARE_API_TOKEN}" || -z "${CLOUDFLARE_ACCOUNT_ID}" ]]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Preview skipped::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID are not set. See docs/preview-deployments.md."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.guard.outputs.configured == 'true'
+        uses: actions/checkout@v7
+        with:
+          # Pin to the branch head. Without this, `pull_request` would build the
+          # merge commit while `push` builds the head, so the same branch alias
+          # could show different content depending on which event ran.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Resolve branch and preview alias
+        id: meta
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          set -euo pipefail
+          BRANCH="${{ github.event.pull_request.head.ref || github.ref_name }}"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+
+          if [[ "${BRANCH}" == "master" ]]; then
+            # master publishes to the Worker's own URL, so it always reflects
+            # what the next production deploy will look like.
+            echo "is_production=true" >> "$GITHUB_OUTPUT"
+            echo "alias=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "is_production=false" >> "$GITHUB_OUTPUT"
+
+          # Preview aliases must be lowercase alphanumeric plus dashes, must
+          # start with a letter, and `<alias>-<worker>` must fit in a 63
+          # character DNS label.
+          ALIAS="$(printf '%s' "${BRANCH}" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
+
+          if [[ -z "${ALIAS}" ]]; then
+            ALIAS="preview"
+          fi
+          if [[ ! "${ALIAS}" =~ ^[a-z] ]]; then
+            ALIAS="b-${ALIAS}"
+          fi
+          if (( ${#ALIAS} > 28 )); then
+            # Truncate, but keep a digest so long branch names stay distinct.
+            HASH="$(printf '%s' "${BRANCH}" | sha1sum | cut -c1-6)"
+            ALIAS="$(printf '%s' "${ALIAS}" | cut -c1-21 | sed -E 's/-+$//')-${HASH}"
+          fi
+
+          echo "alias=${ALIAS}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Hugo CLI
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          set -euo pipefail
+          wget -O "${{ runner.temp }}/hugo.deb" \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
+          sudo dpkg -i "${{ runner.temp }}/hugo.deb"
+
+      - name: Install Node.js dependencies
+        if: steps.guard.outputs.configured == 'true'
+        run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
+
+      - name: Build with Hugo
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          # Deliberately NOT `production`: the theme gates Google Analytics and
+          # Statcounter behind hugo.IsProduction, so previews stay out of the
+          # site's analytics. Everything else renders identically.
+          HUGO_ENVIRONMENT: preview
+          HUGO_ENV: preview
+        run: |
+          set -euo pipefail
+          # A root-relative baseURL makes the build host-agnostic, so the same
+          # output works on whichever preview hostname it lands on.
+          hugo --gc --minify --baseURL "/"
+
+          # Previews must never compete with systems.seas.harvard.edu in search
+          # results. `_headers` is parsed by Workers and is not itself served.
+          cat > public/_headers <<'HEADERS'
+          /*
+            X-Robots-Tag: noindex, nofollow
+          HEADERS
+          printf 'User-agent: *\nDisallow: /\n' > public/robots.txt
+
+      - name: Publish to Cloudflare Workers
+        id: deploy
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          set -euo pipefail
+          WRANGLER="npx --yes wrangler@${WRANGLER_VERSION}"
+
+          # `wrangler versions upload` cannot create a Worker, so the very first
+          # run has to be a plain deploy.
+          if ! ${WRANGLER} versions list --name "${WORKER_NAME}" >/dev/null 2>&1; then
+            echo "Worker '${WORKER_NAME}' does not exist yet; creating it with an initial deploy."
+            ${WRANGLER} deploy
+          fi
+
+          ALIAS="${{ steps.meta.outputs.alias }}"
+          if [[ "${{ steps.meta.outputs.is_production }}" == "true" ]]; then
+            ${WRANGLER} deploy 2>&1 | tee wrangler.log
+          else
+            ${WRANGLER} versions upload --preview-alias "${ALIAS}" 2>&1 | tee wrangler.log
+          fi
+
+          # Prefer the aliased URL; fall back to whatever workers.dev URL
+          # wrangler reported.
+          URL=""
+          if [[ -n "${ALIAS}" ]]; then
+            URL="$(grep -oE "https://${ALIAS}-${WORKER_NAME}\.[a-z0-9-]+\.workers\.dev" wrangler.log | head -n1 || true)"
+          fi
+          if [[ -z "${URL}" ]]; then
+            URL="$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' wrangler.log | tail -n1 || true)"
+          fi
+
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Cloudflare Workers preview"
+            echo
+            if [[ -n "${URL}" ]]; then
+              echo "- **Preview:** ${URL}"
+            else
+              echo "- **Preview:** published, but no URL could be parsed from the wrangler output."
+            fi
+            echo "- **Branch:** \`${{ steps.meta.outputs.branch }}\`"
+            echo "- **Commit:** \`${BUILD_SHA:0:7}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment preview URL on open pull requests
+        if: steps.guard.outputs.configured == 'true' && steps.deploy.outputs.url != ''
+        uses: actions/github-script@v8
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+          PREVIEW_BRANCH: ${{ steps.meta.outputs.branch }}
+        with:
+          script: |
+            const marker = '<!-- cloudflare-workers-preview -->';
+            const url = process.env.PREVIEW_URL;
+            const branch = process.env.PREVIEW_BRANCH;
+            const sha = process.env.BUILD_SHA;
+            const { owner, repo } = context.repo;
+
+            let numbers = [];
+            if (context.eventName === 'pull_request') {
+              numbers = [context.payload.pull_request.number];
+            } else {
+              const prs = await github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: 'open',
+                head: `${owner}:${branch}`,
+                per_page: 100,
+              });
+              numbers = prs.map((pr) => pr.number);
+            }
+
+            if (numbers.length === 0) {
+              core.info(`No open pull request for ${branch}; preview is at ${url}`);
+              return;
+            }
+
+            const body = [
+              marker,
+              '### ⚡ Preview deployment',
+              '',
+              '| | |',
+              '| --- | --- |',
+              `| **Preview** | ${url} |`,
+              `| **Branch** | \`${branch}\` |`,
+              `| **Commit** | \`${sha.slice(0, 7)}\` |`,
+              '',
+              'Rebuilt on every push to this branch. Drafts are excluded and analytics are',
+              'disabled, so the preview matches what merging to `master` will publish.',
+            ].join('\n');
+
+            for (const issue_number of numbers) {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number,
+                per_page: 100,
+              });
+              const existing = comments.find((c) => c.body && c.body.includes(marker));
+
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: existing.id,
+                  body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number,
+                  body,
+                });
+              }
+            }

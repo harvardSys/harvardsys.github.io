@@ -1,0 +1,34 @@
+{
+  // Cloudflare Worker used to host per-branch preview builds of the site.
+  //
+  // Production stays on GitHub Pages (systems.seas.harvard.edu, see
+  // .github/workflows/deploy.yml). This Worker only serves previews, which are
+  // published by .github/workflows/preview.yml on every branch push:
+  //
+  //   master        -> https://harvardsys-preview.<subdomain>.workers.dev
+  //   other branch  -> https://<branch-alias>-harvardsys-preview.<subdomain>.workers.dev
+  //
+  // See docs/preview-deployments.md for setup.
+  "name": "harvardsys-preview",
+  "compatibility_date": "2025-11-01",
+
+  // Assets-only Worker: no `main` script, Hugo's output is served directly.
+  "assets": {
+    "directory": "./public",
+
+    // Hugo emits directory-style pages (/blog/post/index.html), which this
+    // serves at /blog/post/ with or without the trailing slash.
+    "html_handling": "auto-trailing-slash",
+
+    // Serve Hugo's generated /404.html for unknown paths.
+    "not_found_handling": "404-page"
+  },
+
+  // Required for versioned preview URLs and `--preview-alias`.
+  "workers_dev": true,
+  "preview_urls": true,
+
+  "observability": {
+    "enabled": true
+  }
+}
