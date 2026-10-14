@@ -1,19 +1,17 @@
 +++
-title = 'A Year in LLM Serving: What 6 Billion Requests Taught Us'
+title = 'A Year in LLM Serving: Workloads, Caching, and Routing'
 date = 2026-10-12T00:00:00-05:00
 author = 'William Nixon'
 draft = false
 tags = ['LLM', 'systems', 'serving', 'workloads', 'caching', 'load-balancing']
-summary = 'A year of production LLM traffic reveals how workloads change, why simple caching policies remain competitive, and why routing is critical for effective cache reuse.'
+summary = 'An analysis of 6.12 billion production LLM requests, examining workload evolution, traffic patterns, prefix reuse, cache eviction, and request routing.'
 +++
-
-# A Year in LLM Serving: Lessons from 6.12 Billion Requests
 
 In our paper, [A Year in LLM Serving](https://arxiv.org/abs/2608.13573v2), we analyze **6.12 billion requests across 9,174 models and roughly 315,000 users**, collected from a full year of production traffic on [Chutes](https://chutes.ai/), from April 2025 to April 2026.
 
-We study how LLM workloads evolve, how users interact with models, and what these patterns mean for caching and request routing.
+We characterize how LLM workloads evolve, examine model traffic and prefix reuse patterns, and evaluate their implications for KV-cache management and request routing.
 
-Here are five key takeaways from our analysis.
+Below, we summarize five key findings from our analysis.
 
 ## 1. Different models need different optimizations, and their workloads keep changing
 
