@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 525" role="img" aria-labelledby="title desc">
+  <title id="title">Round robin, sticky routing, and cache-aware routing</title>
+  <desc id="desc">Each color represents a session. Purple has the largest prefix, blue an intermediate prefix, and yellow the smallest. Round robin spreads every request across servers and duplicates prefixes. Sticky routing pins every session to one server. Cache-aware routing pins sessions to cached prefixes but spreads work when load becomes imbalanced. Here only the heavy purple session is spread, replicating its shared prefix while distributing its branches.</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #202623; }
+    .heading { font-size: 25px; font-weight: 600; }
+    .label { font-size: 19px; }
+    .server { fill: #fff; stroke: #9ca3af; stroke-width: 1.5; }
+    .route { fill: none; stroke-width: 2.3; }
+  </style>
+  <defs>
+    <marker id="arrow-blue" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#4c78a8" />
+    </marker>
+    <marker id="arrow-purple" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#8b6bb1" />
+    </marker>
+    <marker id="arrow-yellow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6" fill="#e7bd38" />
+    </marker>
+  </defs>
+  <rect width="1200" height="525" fill="#fff" />
+  <line x1="400" y1="48" x2="400" y2="513" stroke="#e5e7eb" />
+  <line x1="800" y1="48" x2="800" y2="513" stroke="#e5e7eb" />
+  <g data-policy="0" transform="translate(0 0)">
+    <text class="heading" x="200" y="66" text-anchor="middle">Round robin</text>
+    <text class="label" x="200" y="98" text-anchor="middle">Spread every request</text>
+    <text x="200" y="132" font-size="17" text-anchor="middle">Requests</text>
+    <rect class="request" x="51" y="146" width="50" height="30" rx="4" fill="#4c78a8" />
+    <path class="route" data-color="blue" d="M76 182 C76 207 60 217 60 244" stroke="#4c78a8" marker-end="url(#arrow-blue)" />
+    <path class="route" data-color="blue" d="M76 182 C76 207 184 217 184 244" stroke="#4c78a8" marker-end="url(#arrow-blue)" />
+    <path class="route" data-color="blue" d="M76 182 C76 207 308 217 308 244" stroke="#4c78a8" marker-end="url(#arrow-blue)" />
+    <rect class="request" x="175" y="146" width="50" height="30" rx="4" fill="#8b6bb1" />
+    <path class="route" data-color="purple" d="M200 182 C200 207 76 217 76 244" stroke="#8b6bb1" marker-end="url(#arrow-purple)" />
+    <path class="route" data-color="purple" d="M200 182 C200 207 200 217 200 244" stroke="#8b6bb1" marker-end="url(#arrow-purple)" />
+    <path class="route" data-color="purple" d="M200 182 C200 207 324 217 324 244" stroke="#8b6bb1" marker-end="url(#arrow-purple)" />
+    <rect class="request" x="299" y="146" width="50" height="30" rx="4" fill="#e7bd38" />
+    <path class="route" data-color="yellow" d="M324 182 C324 207 92 217 92 244" stroke="#e7bd38" marker-end="url(#arrow-yellow)" />
+    <path class="route" data-color="yellow" d="M324 182 C324 207 216 217 216 244" stroke="#e7bd38" marker-end="url(#arrow-yellow)" />
+    <path class="route" data-color="yellow" d="M324 182 C324 207 340 217 340 244" stroke="#e7bd38" marker-end="url(#arrow-yellow)" />
+    <g data-server="1">
+      <rect class="server" x="28" y="256" width="96" height="210" rx="5" />
+      <text x="76" y="282" font-size="18" text-anchor="middle">Server 1</text>
+      <rect class="prefix-block" data-block="blue-1" x="40" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-2" x="79" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-3" x="40" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-4" x="79" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="purple-1" x="40" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-2" x="79" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-3" x="40" y="366" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-4" x="79" y="366" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-5" x="40" y="342" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-6" x="79" y="342" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="yellow-1" x="40" y="318" width="33" height="18" rx="2" fill="#e7bd38" />
+      <rect class="prefix-block" data-block="yellow-2" x="79" y="318" width="33" height="18" rx="2" fill="#e7bd38" />
+    </g>
+    <g data-server="2">
+      <rect class="server" x="152" y="256" width="96" height="210" rx="5" />
+      <text x="200" y="282" font-size="18" text-anchor="middle">Server 2</text>
+      <rect class="prefix-block" data-block="blue-1" x="164" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-2" x="203" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-3" x="164" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-4" x="203" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="purple-1" x="164" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-2" x="203" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-3" x="164" y="366" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-4" x="203" y="366" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-5" x="164" y="342" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-6" x="203" y="342" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="yellow-1" x="164" y="318" width="33" height="18" rx="2" fill="#e7bd38" />
+      <rect class="prefix-block" data-block="yellow-2" x="203" y="318" width="33" height="18" rx="2" fill="#e7bd38" />
+    </g>
+    <g data-server="3">
+      <rect class="server" x="276" y="256" width="96" height="210" rx="5" />
+      <text x="324" y="282" font-size="18" text-anchor="middle">Server 3</text>
+      <rect class="prefix-block" data-block="blue-1" x="288" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-2" x="327" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-3" x="288" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-4" x="327" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="purple-1" x="288" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-2" x="327" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-3" x="288" y="366" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-4" x="327" y="366" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-5" x="288" y="342" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-6" x="327" y="342" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="yellow-1" x="288" y="318" width="33" height="18" rx="2" fill="#e7bd38" />
+      <rect class="prefix-block" data-block="yellow-2" x="327" y="318" width="33" height="18" rx="2" fill="#e7bd38" />
+    </g>
+    <text class="label" x="200" y="503" text-anchor="middle">Duplication · lower hit rate</text>
+  </g>
+  <g data-policy="1" transform="translate(400 0)">
+    <text class="heading" x="200" y="66" text-anchor="middle">Sticky routing</text>
+    <text class="label" x="200" y="98" text-anchor="middle">Pin every session</text>
+    <text x="200" y="132" font-size="17" text-anchor="middle">Requests</text>
+    <rect class="request" x="51" y="146" width="50" height="30" rx="4" fill="#4c78a8" />
+    <path class="route" data-color="blue" d="M76 182 C76 207 76 217 76 244" stroke="#4c78a8" marker-end="url(#arrow-blue)" />
+    <rect class="request" x="175" y="146" width="50" height="30" rx="4" fill="#8b6bb1" />
+    <path class="route" data-color="purple" d="M200 182 C200 207 200 217 200 244" stroke="#8b6bb1" marker-end="url(#arrow-purple)" />
+    <rect class="request" x="299" y="146" width="50" height="30" rx="4" fill="#e7bd38" />
+    <path class="route" data-color="yellow" d="M324 182 C324 207 324 217 324 244" stroke="#e7bd38" marker-end="url(#arrow-yellow)" />
+    <g data-server="1">
+      <rect class="server" x="28" y="256" width="96" height="210" rx="5" />
+      <text x="76" y="282" font-size="18" text-anchor="middle">Server 1</text>
+      <rect class="prefix-block" data-block="blue-1" x="40" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-2" x="79" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-3" x="40" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-4" x="79" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+    </g>
+    <g data-server="2">
+      <rect class="server" x="152" y="256" width="96" height="210" rx="5" />
+      <text x="200" y="282" font-size="18" text-anchor="middle">Server 2</text>
+      <rect class="prefix-block" data-block="purple-1" x="164" y="438" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-2" x="203" y="438" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-3" x="164" y="414" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-4" x="203" y="414" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-5" x="164" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-6" x="203" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+    </g>
+    <g data-server="3">
+      <rect class="server" x="276" y="256" width="96" height="210" rx="5" />
+      <text x="324" y="282" font-size="18" text-anchor="middle">Server 3</text>
+      <rect class="prefix-block" data-block="yellow-1" x="288" y="438" width="33" height="18" rx="2" fill="#e7bd38" />
+      <rect class="prefix-block" data-block="yellow-2" x="327" y="438" width="33" height="18" rx="2" fill="#e7bd38" />
+    </g>
+    <text class="label" x="200" y="503" text-anchor="middle">Load imbalance</text>
+  </g>
+  <g data-policy="2" transform="translate(800 0)">
+    <text class="heading" x="200" y="66" text-anchor="middle">Cache-aware routing</text>
+    <text x="200" y="98" font-size="18" text-anchor="middle">Pin, but spread on load imbalance</text>
+    <text x="200" y="132" font-size="17" text-anchor="middle">Requests</text>
+    <rect class="request" x="51" y="146" width="50" height="30" rx="4" fill="#4c78a8" />
+    <path class="route" data-color="blue" d="M76 182 C76 207 62 217 62 244" stroke="#4c78a8" marker-end="url(#arrow-blue)" />
+    <rect class="request" x="175" y="146" width="50" height="30" rx="4" fill="#8b6bb1" />
+    <path class="route" data-color="purple" d="M200 182 C200 207 90 217 90 244" stroke="#8b6bb1" marker-end="url(#arrow-purple)" />
+    <path class="route" data-color="purple" d="M200 182 C200 207 200 217 200 244" stroke="#8b6bb1" marker-end="url(#arrow-purple)" />
+    <path class="route" data-color="purple" d="M200 182 C200 207 310 217 310 244" stroke="#8b6bb1" marker-end="url(#arrow-purple)" />
+    <rect class="request" x="299" y="146" width="50" height="30" rx="4" fill="#e7bd38" />
+    <path class="route" data-color="yellow" d="M324 182 C324 207 338 217 338 244" stroke="#e7bd38" marker-end="url(#arrow-yellow)" />
+    <g data-server="1">
+      <rect class="server" x="28" y="256" width="96" height="210" rx="5" />
+      <text x="76" y="282" font-size="18" text-anchor="middle">Server 1</text>
+      <rect class="prefix-block" data-block="blue-1" x="40" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-2" x="79" y="438" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-3" x="40" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="blue-4" x="79" y="414" width="33" height="18" rx="2" fill="#4c78a8" />
+      <rect class="prefix-block" data-block="purple-1" x="40" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-2" x="79" y="390" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-3" x="40" y="366" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-4" x="79" y="366" width="33" height="18" rx="2" fill="#8b6bb1" />
+    </g>
+    <g data-server="2">
+      <rect class="server" x="152" y="256" width="96" height="210" rx="5" />
+      <text x="200" y="282" font-size="18" text-anchor="middle">Server 2</text>
+      <rect class="prefix-block" data-block="purple-1" x="164" y="438" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-2" x="203" y="438" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-5" x="164" y="414" width="33" height="18" rx="2" fill="#8b6bb1" />
+    </g>
+    <g data-server="3">
+      <rect class="server" x="276" y="256" width="96" height="210" rx="5" />
+      <text x="324" y="282" font-size="18" text-anchor="middle">Server 3</text>
+      <rect class="prefix-block" data-block="yellow-1" x="288" y="438" width="33" height="18" rx="2" fill="#e7bd38" />
+      <rect class="prefix-block" data-block="yellow-2" x="327" y="438" width="33" height="18" rx="2" fill="#e7bd38" />
+      <rect class="prefix-block" data-block="purple-1" x="288" y="414" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-2" x="327" y="414" width="33" height="18" rx="2" fill="#8b6bb1" />
+      <rect class="prefix-block" data-block="purple-6" width="33" height="18" rx="2" fill="#8b6bb1" x="288" y="390" />
+    </g>
+    <text class="label" x="200" y="503" text-anchor="middle">Reuse with selective spreading</text>
+  </g>
+</svg>
