@@ -18,7 +18,7 @@ showToc = true
 
 *Work carried out during an internship at Meta.*
 
-[Open-source code](https://github.com/meta-pytorch/monarch/tree/main/examples/weightbridge) · [Paper](https://arxiv.org/abs/2609.25442)
+[Open-source code](https://github.com/meta-pytorch/monarch/tree/main/examples/weightbridge) · [Paper](https://arxiv.org/abs/2609.25442) · [PyTorch Conference talk](https://events.linuxfoundation.org/pytorch-conference-north-america/program/schedule/?id=1255147)
 
 ## Diverse RL Configurations Challenge Weight Transfer
 
@@ -125,4 +125,4 @@ A coding agent integrated WeightBridge into Miles on its first attempt in **24.5
 
 WeightBridge also integrates with an internal framework using **different training, rollout, and RDMA backends from Miles**, demonstrating API generality across different backend stacks. With minimal manual integration effort, it reduced end-to-end weight-transfer time by **6.29–11.00×** across one to four rollout replicas.
 
-[Explore the open-source code](https://github.com/meta-pytorch/monarch/tree/main/examples/weightbridge) · [Read the paper](https://arxiv.org/abs/2609.25442) · [Integration guide](https://github.com/meta-pytorch/monarch/blob/main/examples/weightbridge/docs/integration.md)
+[Explore the open-source code](https://github.com/meta-pytorch/monarch/tree/main/examples/weightbridge) · [Read the paper](https://arxiv.org/abs/2609.25442) · [Integration guide](https://github.com/meta-pytorch/monarch/blob/main/examples/weightbridge/docs/integration.md) · [PyTorch Conference talk](https://events.linuxfoundation.org/pytorch-conference-north-america/program/schedule/?id=1255147)
