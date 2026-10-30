@@ -40,9 +40,11 @@ Supporting these three steps becomes harder as RL configurations diversify. Exis
 
 This diversity creates three challenges.
 
-**1. Heterogeneous layouts complicate correspondence.** Different models and hardware drive diverse parallelism and sharding strategies for both trainers and rollouts. Within a job, training’s larger memory footprint and throughput goals differ inherently from inference’s decoding-latency goals, producing mismatched layouts. Specialized kernels further change tensor fusion, packing, and ordering within the GPU, making correspondence a cross-rank mapping problem.
+**1. Heterogeneous layouts complicate correspondence.** Different models and hardware drive diverse parallelism strategies and model layouts for both trainers and rollouts. Trainers and rollouts usually use mismatched layouts because of their inherently different performance goals and algorithmic flows. For example, in the figure below, the trainer uses larger tensor-parallel (TP) and pipeline-parallel (PP) degrees because gradients and optimizer states increase its memory requirements.
 
-{{< figure width="100%" src="bg-example.svg" alt="Weight correspondence between TP2 EP2 PP2 trainers and TP1 EP2 DP2 rollouts" caption="**Layout mismatch.** Mismatched parallelism causes cross-rank weight correspondence; T0–T3 are trainers and R0–R3 are rollouts." >}}
+Specialized kernels in training and inference frameworks further increase differences in how tensors are stored on the GPU: they may split, transpose, or pad the same parameter tensor in entirely different ways. Together, these mismatches substantially complicate weight correspondence between trainers and rollouts.
+
+{{< figure width="100%" src="bg-example.svg" alt="Weight correspondence between TP2 EP2 PP2 trainers and TP1 EP2 DP2 rollouts" caption="**Layout mismatch.** Mismatched parallelism causes cross-rank weight correspondence; T0–T3 are trainer workers and R0–R3 are rollout workers." >}}
 
 **2. Replication and topology complicate routing.** Multiple trainers may hold the same weights, and multiple rollout workers may need them. Full-model broadcasts can deliver unneeded elements, causing redundancy, while independent fetches can overload one sender, causing *imbalance*. Efficient planning must eliminate redundant traffic and balance aggregate load across replica groups, using fast intra-node NVLink and slower inter-node RDMA appropriately.
 
