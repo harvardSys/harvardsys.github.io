@@ -1,7 +1,7 @@
 +++
 title = "Stop Waiting for Weights: Efficient RL Updates with WeightBridge"
 date = 2026-10-27T12:00:00-04:00
-draft = true
+draft = false
 author = "Xuanlin Jiang"
 bio = "Xuanlin Jiang is a second-year PhD student in Computer Science at Harvard University, advised by Prof. Minlan Yu. His research focuses on systems for machine learning. He earned a B.S. in Computer Science from Peking University and has published work at MLSys and in ACM Transactions on Computer Systems (TOCS). His current research focuses on building systems for reinforcement learning for large language models."
 tags = ["LLM", "systems", "performance"]
