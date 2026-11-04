@@ -1,0 +1,121 @@
+{{- /*
+  Renders one image figure. Shared by the markdown image render hook
+  (layouts/_default/_markup/render-image.html) and the {{< figure >}} shortcode
+  (layouts/shortcodes/figure.html), so both produce identical markup.
+
+  Context: a dict with
+    page      the page (for resolving page-bundle resources)       required
+    src       image path or URL                                    required
+    alt       alt text (defaults to the plain-text caption)
+    caption   caption, markdown allowed
+    title     optional heading shown above the caption (Hugo's built-in figure param)
+    attr, attrlink   attribution text / link appended to the caption
+    size      small | medium | large | full | wide   (see assets/css/figures.css)
+    panels    "x,y,w,h; x,y,w,h; ..." crop boxes in the image's own units
+              (pixels for raster images, viewBox units for SVG). Below 600px the
+              figure shows these crops stacked instead of the whole image.
+    class, id, width, height, loading, link, target, rel   passed through
+*/ -}}
+{{- $page := .page -}}
+{{- $src := .src -}}
+{{- $caption := .caption | default "" -}}
+{{- $title := .title | default "" -}}
+{{- $alt := .alt | default ($caption | markdownify | plainify) -}}
+
+{{- /* Resolve page-bundle (or assets/) resources and read the intrinsic size. */ -}}
+{{- $w := 0 -}}
+{{- $h := 0 -}}
+{{- $vb := slice -}}
+{{- $u := urls.Parse $src -}}
+{{- if not $u.IsAbs -}}
+  {{- $path := strings.TrimPrefix "./" $u.Path -}}
+  {{- with or ($page.Resources.Get $path) (resources.Get $path) -}}
+    {{- $src = .RelPermalink -}}
+    {{- if eq .MediaType.SubType "svg" -}}
+      {{- with index (findRE `<svg[^>]*>` .Content 1) 0 -}}
+        {{- $tag := . -}}
+        {{- $toPx := dict "" 1.0 "px" 1.0 "pt" 1.3333333 "pc" 16.0 "mm" 3.7795276 "cm" 37.795276 "in" 96.0 -}}
+        {{- with findRESubmatch `\swidth="([0-9.]+)(px|pt|pc|mm|cm|in)?"` $tag 1 -}}
+          {{- $m := index . 0 -}}{{- $w = mul (float (index $m 1)) (index $toPx (index $m 2)) -}}
+        {{- end -}}
+        {{- with findRESubmatch `\sheight="([0-9.]+)(px|pt|pc|mm|cm|in)?"` $tag 1 -}}
+          {{- $m := index . 0 -}}{{- $h = mul (float (index $m 1)) (index $toPx (index $m 2)) -}}
+        {{- end -}}
+        {{- with findRESubmatch `viewBox="\s*([-0-9.]+)[\s,]+([-0-9.]+)[\s,]+([0-9.]+)[\s,]+([0-9.]+)` $tag 1 -}}
+          {{- $m := index . 0 -}}
+          {{- $vb = slice (float (index $m 1)) (float (index $m 2)) (float (index $m 3)) (float (index $m 4)) -}}
+          {{- if or (eq $w 0) (eq $h 0) -}}
+            {{- $w = index $vb 2 -}}{{- $h = index $vb 3 -}}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+    {{- else if eq .ResourceType "image" -}}
+      {{- $w = .Width -}}{{- $h = .Height -}}
+    {{- end -}}
+  {{- else -}}
+    {{- warnf "%s: figure image %q not found" $page.File.Path $path -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* Panel crop boxes are given in the image's own units (viewBox units for SVG). */ -}}
+{{- $unitW := $w -}}{{- $unitH := $h -}}
+{{- with $vb -}}{{- $unitW = index . 2 -}}{{- $unitH = index . 3 -}}{{- end -}}
+{{- $panels := slice -}}
+{{- with .panels -}}
+  {{- if not (and $unitW $unitH) -}}
+    {{- errorf "%s: figure %q has panels but its size is unknown" $page.File.Path $src -}}
+  {{- end -}}
+  {{- range split . ";" -}}
+    {{- $p := split (trim . " \n\t") "," -}}
+    {{- if eq (len $p) 4 -}}
+      {{- $panels = $panels | append (dict
+            "x" (float (trim (index $p 0) " ")) "y" (float (trim (index $p 1) " "))
+            "w" (float (trim (index $p 2) " ")) "h" (float (trim (index $p 3) " "))) -}}
+    {{- else if trim . " \n\t" -}}
+      {{- errorf "%s: bad panel %q for %q (want x,y,w,h)" $page.File.Path . $src -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $classes := slice "fig" -}}
+{{- with .size -}}{{- $classes = $classes | append (printf "fig--%s" .) -}}{{- end -}}
+{{- if $panels -}}{{- $classes = $classes | append "fig--panels" -}}{{- end -}}
+{{- with .class -}}{{- $classes = $classes | append . -}}{{- end -}}
+
+{{- $widthAttr := string (.width | default (cond (gt $w 0) (string (math.Round $w)) "")) -}}
+{{- $heightAttr := string (.height | default (cond (gt $h 0) (string (math.Round $h)) "")) -}}
+{{- $style := "" -}}
+{{- if strings.HasSuffix $widthAttr "%" -}}
+  {{- $style = printf "width:%s" $widthAttr -}}
+  {{- $widthAttr = cond (gt $w 0) (string (math.Round $w)) "" -}}
+  {{- $heightAttr = cond (gt $h 0) (string (math.Round $h)) "" -}}
+{{- end -}}
+
+<figure class="{{ delimit $classes " " }}"{{ with .id }} id="{{ . }}"{{ end }}>
+  {{- with .link }}<a href="{{ . }}"{{ with $.target }} target="{{ . }}"{{ end }}{{ with $.rel }} rel="{{ . }}"{{ end }}>{{ end -}}
+  <img class="fig-whole" src="{{ $src }}" alt="{{ $alt }}"
+    {{- with $widthAttr }} width="{{ . }}"{{ end }}
+    {{- with $heightAttr }} height="{{ . }}"{{ end }}
+    {{- with $style }} style="{{ . | safeCSS }}"{{ end }} loading="{{ .loading | default "lazy" }}" decoding="async">
+  {{- if .link }}</a>{{ end -}}
+  {{- with $panels }}
+  <div class="fig-panels">
+    {{- range $i, $p := . -}}
+      {{- $x := $p.x -}}{{- $y := $p.y -}}{{- $pw := $p.w -}}{{- $ph := $p.h -}}
+      {{- $css := printf "width:%.4f%%;left:%.4f%%;top:%.4f%%" (mul 100 (div $unitW $pw)) (mul -100 (div $x $pw)) (mul -100 (div $y $ph)) }}
+    {{- /* Never upscale a crop past its native size (raster panels would blur). */}}
+    <div class="fig-panel" style="{{ printf "aspect-ratio:%.2f / %.2f;max-width:%.0fpx" $pw $ph (mul $pw (div $w $unitW)) | safeCSS }}">
+      <img src="{{ $src }}" alt="{{ if eq $i 0 }}{{ $alt }}{{ end }}" style="{{ $css | safeCSS }}" loading="lazy" decoding="async">
+    </div>
+    {{- end }}
+  </div>
+  {{- end }}
+  {{- if or $title $caption .attr }}
+  <figcaption>
+    {{- with $title }}<h4>{{ . }}</h4>{{ end -}}
+    {{- $caption | markdownify -}}
+    {{- with .attr }} {{ with $.attrlink }}<a href="{{ . }}">{{ end }}{{ $.attr | markdownify }}{{ if $.attrlink }}</a>{{ end }}{{ end -}}
+  </figcaption>
+  {{- end }}
+</figure>
+{{- /* trailing newline intentionally omitted */ -}}

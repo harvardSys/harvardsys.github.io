@@ -54,7 +54,102 @@ would fit.
 
 MorphServe treats that choice as temporary.
 
-![GPU memory changing between quiet load, a traffic spike, and recovery](morphserve-elastic-memory.svg "Selected layers shrink during a burst so the KV cache can expand, then return to full precision")
+{{< diagram alt="GPU memory changing between quiet load, a traffic spike, and recovery: during the spike, selected FP16 layers shrink to W4 and the freed memory becomes KV cache; full precision returns afterwards" caption="Selected layers shrink during a burst so the KV cache can expand, then return to full precision" >}}
+<style>
+  .d-ms { --ms-w: #1a2525; --ms-q: #e8502c; --ms-kv: #2d7a6c; --ms-free: #d4d0c4;
+          --ms-ink: #171816; --ms-muted: #66665f;
+          background: #f2f0e9; border-radius: 6px; padding: 1.75rem 1.75rem 1.25rem; color: var(--ms-ink); }
+  .d-ms-title { font-size: 1.75rem; font-weight: 650; line-height: 1.15; letter-spacing: -0.01em; }
+  .d-ms-sub { margin-top: .4rem; font-size: .9375rem; color: var(--ms-muted); }
+  /* Subgrid keeps the rows (title, note, flag, bar) aligned across the three cards. */
+  .d-ms-stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 2.25rem; margin-top: 1.75rem; }
+  .d-ms-stages > div { display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: 0; }
+  .d-ms-card { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 0; }
+  .d-ms-eyebrow { padding-left: 1.5rem; margin-bottom: .8rem; font-size: .6875rem; font-weight: 700;
+                  letter-spacing: .11em; text-transform: uppercase; color: var(--ms-muted); }
+  .d-ms-spike .d-ms-eyebrow, .d-ms-flag { color: var(--ms-q); }
+  .d-ms-card { background: #e9e6dc; border: 1px solid #cbc8bc; border-radius: 2px; padding: 1.15rem 1.5rem 1.5rem; }
+  .d-ms-name { font-size: 1.0625rem; font-weight: 700; }
+  .d-ms-note { margin-top: .3rem; font-size: .8125rem; color: var(--ms-muted); }
+  .d-ms-flag { min-height: 1.1rem; margin: .35rem 0 .2rem; font-size: .6875rem; font-weight: 700; }
+  .d-ms-gpu { display: flex; flex-direction: column; height: 11.8rem; }
+  .d-ms-gpu > span { display: flex; align-items: center; min-width: 0; padding: 0 1rem; overflow: hidden;
+                     white-space: nowrap; font-size: .875rem; font-weight: 700; color: #f2f0e9; }
+  .d-ms-gpu .w { flex: 110 1 0; background: var(--ms-w); }
+  .d-ms-spike .d-ms-gpu .w { flex-grow: 60; }
+  .d-ms-gpu .q { flex: 37 1 0; background: var(--ms-q); color: #fff; font-size: .8125rem; }
+  .d-ms-gpu .kv { flex: 54 1 0; background: var(--ms-kv); }
+  .d-ms-spike .d-ms-gpu .kv { flex-grow: 92; }
+  .d-ms-gpu .free { flex: 25 1 0; background: var(--ms-free); color: var(--ms-muted); font-size: .6875rem;
+                    letter-spacing: .06em; text-transform: uppercase; }
+  .d-ms-gpu .short { display: none; }
+  .d-ms-gpu .free .short { text-transform: none; }
+  .d-ms-legend { display: flex; flex-wrap: wrap; gap: .5rem 2rem; margin-top: 2.25rem; font-size: .75rem; color: var(--ms-muted); }
+  .d-ms-legend i { display: inline-block; width: 1.05rem; height: .25rem; margin-right: .6rem; vertical-align: middle; }
+  .d-ms-legend .end { margin-left: auto; }
+
+  /* Narrow: one row per stage, memory drawn as a horizontal bar on a shared scale. */
+  @container (max-width: 36rem) {
+    .d-ms { padding: 1.25rem 1rem 1rem; }
+    .d-ms-title { font-size: 1.375rem; }
+    .d-ms-sub { font-size: .875rem; }
+    .d-ms-stages { grid-template-columns: 1fr; row-gap: 1.1rem; margin-top: 1.25rem; }
+    .d-ms-stages > div, .d-ms-card { display: block; }
+    .d-ms-eyebrow { padding-left: 0; margin-bottom: .4rem; }
+    .d-ms-card { padding: .8rem .9rem .9rem; }
+    .d-ms-name { font-size: 1rem; }
+    .d-ms-note { margin-top: .1rem; }
+    .d-ms-flag { min-height: 0; margin: .3rem 0 0; }
+    .d-ms-flag:empty { display: none; }
+    .d-ms-gpu { flex-direction: row; height: 2.5rem; margin-top: .6rem; }
+    .d-ms-gpu > span { padding: 0 .5rem; font-size: .75rem; }
+    .d-ms-gpu .free { justify-content: center; padding: 0; font-size: .6875rem; letter-spacing: 0; }
+    .d-ms-gpu .long { display: none; }
+    .d-ms-gpu .short { display: inline; }
+    .d-ms-legend { gap: .4rem 1.25rem; margin-top: 1.25rem; }
+    .d-ms-legend .end { margin-left: 0; }
+  }
+</style>
+<div class="d-ms">
+  <div class="d-ms-title">One GPU, three shapes</div>
+  <div class="d-ms-sub">Model precision becomes an elastic reserve for the KV cache.</div>
+  <div class="d-ms-stages">
+    <div>
+      <div class="d-ms-eyebrow">Quiet load</div>
+      <div class="d-ms-card">
+        <div class="d-ms-name">1 · Quiet</div>
+        <div class="d-ms-note">Maximize generation quality</div>
+        <div class="d-ms-flag"></div>
+        <div class="d-ms-gpu"><span class="w"><span class="long">FP16 model weights</span><span class="short">FP16 weights</span></span><span class="kv">KV cache</span><span class="free"><span class="long">Headroom</span><span class="short">free</span></span></div>
+      </div>
+    </div>
+    <div class="d-ms-spike">
+      <div class="d-ms-eyebrow">Traffic spike</div>
+      <div class="d-ms-card">
+        <div class="d-ms-name">2 · Pressure</div>
+        <div class="d-ms-note">Trade a little precision for capacity</div>
+        <div class="d-ms-flag">75% less memory per W4 layer</div>
+        <div class="d-ms-gpu"><span class="w"><span class="long">FP16 layers</span><span class="short">FP16</span></span><span class="q"><span class="long">Selected W4 layers</span><span class="short">W4</span></span><span class="kv"><span class="long">Expanded KV cache</span><span class="short">KV cache</span></span></div>
+      </div>
+    </div>
+    <div>
+      <div class="d-ms-eyebrow">Pressure falls</div>
+      <div class="d-ms-card">
+        <div class="d-ms-name">3 · Recovery</div>
+        <div class="d-ms-note">Return to full precision</div>
+        <div class="d-ms-flag"></div>
+        <div class="d-ms-gpu"><span class="w"><span class="long">FP16 model weights</span><span class="short">FP16 weights</span></span><span class="kv">KV cache</span><span class="free"><span class="long">Headroom</span><span class="short">free</span></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="d-ms-legend">
+    <span><i style="background: var(--ms-w)"></i>Full-precision weights</span>
+    <span><i style="background: var(--ms-q)"></i>Quantized layers</span>
+    <span><i style="background: var(--ms-kv)"></i>KV cache blocks</span>
+    <span class="end">No restart · no re-prefill · token-level transition</span>
+  </div>
+</div>
+{{< /diagram >}}
 
 Replacing one FP16 layer with its weight-only INT4 counterpart can free up to
 75% of that layer's weight memory. MorphServe does not use the saving to

@@ -2,6 +2,10 @@
        after the post content. Kept in sync with the theme template otherwise. */ -}}
 {{- define "main" -}}
 
+{{- with resources.Get "css/figures.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}">
+{{- end -}}
+
 <article>
   <header class="mb-8">
     {{- if eq .Section "seminar" -}}<div class="seminar-eyebrow">SEMINAR</div>{{- end -}}

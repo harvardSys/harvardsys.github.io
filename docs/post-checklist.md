@@ -23,7 +23,8 @@ This checklist is meant to be used before publishing a post. It ensures that the
    ```
 
    See [Hugo's summary documentation](https://gohugo.io/content-management/summaries/) for more details.
-- [ ] **Images properly referenced**: Check all image paths and alt text are correct. Use preferred formats (SVG for diagrams, WebP for photos). File sizes should be optimized.
+- [ ] **Images properly referenced**: Check all image paths and alt text are correct. Use preferred formats (SVG for diagrams, WebP for photos). File sizes should be optimized. A missing image now prints a `figure image ... not found` warning during the build.
+- [ ] **Figures readable on phone and laptop**: View the post at ~390px wide (browser device toolbar) and at laptop width. Text in every figure should be readable on the phone without zooming, nothing should scroll sideways, and on a laptop figure text should not be much larger than body text. See the [Figures guide](figures.md) for `size`, `panels`, and code-built `{{< diagram >}}` figures.
 - [ ] **Links**: Check that all URLs are accessible and correct.
 - [ ] **Enable Table of Contents if the post is long**: If the post is long, consider adding `showToc = true` in the front matter to enable a table of contents.
 - [ ] **No build errors**: Ensure no Hugo build warnings or errors.

@@ -13,17 +13,6 @@
   .s4 { stroke: #e8502c; } .f4 { fill: #e8502c; }
   .dot { stroke: #e9e6dc; stroke-width: 1.8; }
   text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-  @media (prefers-color-scheme: dark) {
-    .ink-1 { fill: #efeee8; }
-    .ink-2 { fill: #c3c2b7; }
-    .muted { fill: #8f8e87; }
-    .box   { fill: #1d211f; stroke: #393c38; }
-    .ring  { stroke: #8f8e87; }
-    .s1 { stroke: #3987e5; } .f1 { fill: #3987e5; }
-    .f2 { fill: #199e70; }
-    .s4 { stroke: #ff6841; } .f4 { fill: #ff6841; }
-    .dot { stroke: #1d211f; }
-  }
 </style>
 <defs>
   <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f1"/></marker>

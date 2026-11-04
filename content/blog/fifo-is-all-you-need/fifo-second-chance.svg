@@ -11,17 +11,6 @@
   .s4 { stroke: #e8502c; } .f4 { fill: #e8502c; }
   .smut { stroke: #898781; }
   text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-  @media (prefers-color-scheme: dark) {
-    .ink-1 { fill: #efeee8; }
-    .ink-2 { fill: #c3c2b7; }
-    .muted { fill: #8f8e87; }
-    .box   { fill: #1d211f; stroke: #393c38; }
-    .ring  { stroke: #8f8e87; }
-    .s1 { stroke: #3987e5; } .f1 { fill: #3987e5; }
-    .s2 { stroke: #199e70; } .f2 { fill: #199e70; }
-    .s4 { stroke: #ff6841; } .f4 { fill: #ff6841; }
-    .smut { stroke: #8f8e87; }
-  }
 </style>
 <defs>
   <marker id="ah-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f1"/></marker>
@@ -53,7 +42,7 @@
 <circle cx="498" cy="171" r="11" class="f2"/><path d="M493,171 L496.5,175 L503,167" class="chk"/>
 <circle cx="572" cy="171" r="11" class="ring"/>
 
-<text x="572" y="205" font-size="11.5" text-anchor="middle" class="muted">tail (oldest)</text>
+<text x="572" y="219" font-size="11.5" text-anchor="middle" class="muted">tail (oldest)</text>
 
 <!-- eviction arrow off the tail -->
 <line x1="612" y1="171" x2="702" y2="171" class="s4" stroke-width="2.5" marker-end="url(#ah-red)"/>

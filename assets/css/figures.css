@@ -1,0 +1,156 @@
+/*
+ * Blog figures. Loaded by layouts/_default/single.html.
+ *
+ * Markup comes from layouts/partials/figure.html (markdown images and the
+ * {{< figure >}} shortcode) and layouts/shortcodes/diagram.html (figures
+ * written as HTML/CSS/SVG inside a post). See docs/new-post.md.
+ *
+ * Every figure is a size container, so panels and diagrams react to the width
+ * the figure actually gets (phone column, desktop column, or the wide breakout)
+ * instead of the viewport.
+ */
+
+.fig {
+  /* Tokens shared by code-built diagrams, so they match the site in one place. */
+  --fig-ink: #1f2328;
+  --fig-ink-2: #4b5563;
+  --fig-muted: #6b7280;
+  --fig-line: #d1d5db;
+  --fig-surface: #f6f7f8;
+  --fig-blue: #4c78a8;
+  --fig-purple: #8b6bb1;
+  --fig-yellow: #e7bd38;
+  --fig-green: #1baf7a;
+  --fig-red: #e8502c;
+  --fig-gold: #b8862f;
+  --fig-teal: #2d7a6c;
+
+  container-type: inline-size;
+  margin-block: 2.25rem;
+  margin-inline: auto;
+}
+
+.fig img {
+  display: block;
+  margin-inline: auto;
+  max-width: 100%;
+  height: auto;
+}
+
+.fig > figcaption {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--tw-prose-captions, #6b7280);
+}
+
+.fig > figcaption h4 {
+  margin: 0 0 0.25rem;
+  font-size: inherit;
+}
+
+/* ---------- Size presets (cap on desktop, always full width on phones) ---- */
+
+.fig--small  { max-width: 30rem; }   /* 480px: small single-column paper figures */
+.fig--medium { max-width: 40rem; }   /* 640px */
+.fig--large  { max-width: 48rem; }   /* 768px */
+
+.fig--small img,
+.fig--medium img,
+.fig--large img,
+.fig--full img,
+.fig--wide img {
+  width: 100%;
+}
+
+/* Break out of the 900px text column on large screens (dense multi-panel plots). */
+@media (min-width: 1100px) {
+  .fig--wide {
+    width: auto;
+    max-width: none;
+    margin-inline: calc((100% - min(75rem, 100vw - 6rem)) / 2);
+  }
+}
+
+/* ---------- Panels: re-flow a multi-panel image on narrow screens -------- */
+/* The whole image is shown when there is room; below 600px the same file is  */
+/* shown again as one crop per panel, stacked, so each panel stays readable.   */
+
+.fig-panels {
+  display: none;
+}
+
+@container (max-width: 37.5rem) {
+  .fig--panels .fig-whole {
+    display: none;
+  }
+
+  .fig--panels .fig-panels {
+    display: grid;
+    gap: 1.25rem;
+  }
+}
+
+.fig-panel {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.fig .fig-panel img {
+  position: absolute;
+  max-width: none;
+  margin: 0;
+}
+
+/* ---------- Diagrams: figures written as code ---------------------------- */
+
+.fig-diagram > .fig-body {
+  font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--fig-ink);
+}
+
+.fig-diagram svg {
+  display: block;
+  overflow: visible;
+}
+
+.fig-diagram svg text {
+  font-family: inherit;
+  fill: currentColor;
+}
+
+/* Art direction: when a drawing cannot re-flow (connectors, animation), put a  */
+/* wide version and a narrow version in the same diagram; one shows at a time. */
+.fig .fig-narrow-only {
+  display: none;
+}
+
+@container (max-width: 45rem) {
+  .fig .fig-wide-only {
+    display: none;
+  }
+
+  .fig .fig-narrow-only {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fig-diagram * {
+    animation: none !important;
+  }
+}
+
+/* Text for screen readers only (e.g. "yes" next to a ✓ in a table). */
+.fig .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

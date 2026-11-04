@@ -90,11 +90,15 @@ Follow the following guide:
    > Note: If you don't want to view draft posts, you can simply run `hugo server` without the `--buildDrafts` flag.
 7. Start writing your content in markdown format below the front matter.
 
-   For figures, it is recommended to place them in the same directory as the markdown file. Svg (for diagrams) and webp (for photos) are preferred formats. You can reference the figures in markdown as follows:
+   For figures, it is recommended to place them in the same directory as the markdown file. Svg (for diagrams) and webp (for photos) are preferred formats. You can reference the figures in markdown as follows. The quoted title becomes the figure's caption:
 
    ```markdown
-    ![Alt text](figure-name.webp "title")
+    ![Alt text](figure-name.webp "Caption")
     ```
+
+   Figures must be readable on both phones (~330px column) and laptops (900px column). See the [Figures guide](figures.md):
+   - Draw diagrams and tables as **code** with the `{{< diagram >}}` shortcode, so their layout re-flows on small screens.
+   - For plots, set a `size`, and add `panels` so a multi-panel plot stacks its panels on phones.
 8. Once you are satisfied with the post, do the [post checklist](post-checklist.md). After completing the checklist, change the `draft` field to `false` in the front matter:
 
    ```markdown

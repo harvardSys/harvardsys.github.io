@@ -22,7 +22,7 @@ In this short blog, we'll explore the data that gives confidence to those result
 
 In this plot, we see that as the coefficient of variation of the interarrival times increases (more bursty), the median time per output token (TPOT) and end-to-end latency (E2EL) decrease. This was observed on both synthetic and realistic workloads, like ShareGPT and BurstGPT. Time to first token (TTFT) is much more config dependent, though we'd expect it to worsen due to the "clustering" of arrivals.
 
-{{< figure src="images/tpot_latencies.svg" alt="Median TPOT vs CV" caption="Figure 1: Median/p90 TPOT and E2EL decrease ~50% between CV = 1 (Poisson process) and CV = 3.16 (very bursty arrivals) on BurstGPT. TTFT improves non-monotonically. Mean TPOT (not shown) improves 57% from 70 ms to 30 ms. Bands represent standard deviation across 6 replications at 1k requests." >}}
+{{< figure src="images/tpot_latencies.svg" panels="0,26,492,271; 492,26,503,271; 0,297,492,275; 492,297,503,275; 0,572,492,274; 492,572,503,274" alt="Median TPOT vs CV" caption="Figure 1: Median/p90 TPOT and E2EL decrease ~50% between CV = 1 (Poisson process) and CV = 3.16 (very bursty arrivals) on BurstGPT. TTFT improves non-monotonically. Mean TPOT (not shown) improves 57% from 70 ms to 30 ms. Bands represent standard deviation across 6 replications at 1k requests." >}}
 
 In fact, burstiness generally helps most of the distribution, sometimes slightly hurting the tail (Fig. 2). 
 
@@ -97,7 +97,7 @@ This artifact is consistent with the profiling results of several published pape
 
 Anyway, some more measurements and access to an H200 confirmed that a majority of the "interference" in mixed batches was due to the underoptimized FA2 attention kernel, tested by benchmarking the same workload on H200 with FA2 and FA3 (Fig. 6). 
 
-{{< figure src="images/fa2_vs_fa3.svg" alt="FA2 vs FA3" caption="Figure 6: Burstiness improves TPOT using flash attention 2, but the trend reverses with flash attention 3 on the same hardware and workload." >}}
+{{< figure src="images/fa2_vs_fa3.svg" size="wide" panels="0,25,375,289; 375,25,379,289; 754,25,385,289" alt="FA2 vs FA3" caption="Figure 6: Burstiness improves TPOT using flash attention 2, but the trend reverses with flash attention 3 on the same hardware and workload." >}}
 
 When using FA3, higher burstiness still increased the fraction of exclusive decode iterations, but this had a minimal effect on TPOT. Any gains were outweighed by the TTFT penalties incurred from higher burstiness, worsening E2EL. 
 ## When does burstiness actually help?
@@ -153,16 +153,10 @@ We compared round robin (RR) and join-shortest-queue (JSQ) to their "sticky" var
 
 **Figures:**
 
-{{< figure src="images/ols.svg" alt="Linear fit of iter time in terms of p and d tokens." caption="Figure A1: OLS fitting of iteration time vs prefill and decode token count. Each decode token is roughly 12x more expensive than each prefill token. gpu_forward_ms = 0.027829 * p_tokens + 0.340659 * d_tokens - 24.379055, with R-squared: 0.8462." >}}
+{{< figure src="images/ols.svg" size="wide" panels="0,21,425,331; 425,21,426,331" alt="Linear fit of iter time in terms of p and d tokens." caption="Figure A1: OLS fitting of iteration time vs prefill and decode token count. Each decode token is roughly 12x more expensive than each prefill token. gpu_forward_ms = 0.027829 * p_tokens + 0.340659 * d_tokens - 24.379055, with R-squared: 0.8462." >}}
 
 Although the fit in Fig. A1 is poor, likely because it doesn't account for quadratic attention costs, the trend is still as expected. Intuitively, each decode token in a sequence also has at least as much "attention" to compute as the prefill tokens which preceded it. Note that the numbers used in previous calculations are directly from the data rather than what this model predicts. 
 
 {{< figure src="images/router_tpot_ecdf.svg" alt="Sticky router TPOT ecdf" caption="Figure A2: TPOT ECDF comparing RR and JSQ to their sticky variants. In both cases, the variant improves the whole TPOT distribution." >}}
 
 {{< figure src="images/router_ttft_ecdf.svg" alt="Sticky router TTFT ecdf" caption="Figure A3: TTFT ECDF comparing RR and JSQ to their sticky variants. The sticky router maintains a similar median TTFT but worsens the tail." >}}
-
-<style>
-/* Scoped to this post (this <style> only loads on this page).
-   Center figure images; captions stay left-aligned (theme default). */
-.prose figure img { margin-inline: auto; }
-</style>

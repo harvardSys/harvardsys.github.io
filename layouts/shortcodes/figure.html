@@ -1,0 +1,16 @@
+{{- /*
+  Overrides Hugo's built-in {{< figure >}} so it renders the same markup as
+  markdown images (layouts/partials/figure.html). All built-in parameters keep
+  working (src, alt, caption, title, class, width, height, loading, link,
+  target, rel, attr, attrlink); this adds:
+
+    size    small | medium | large | full | wide
+    panels  "x,y,w,h; ..." crop boxes, stacked on narrow screens
+
+  {{< figure src="plot.svg" size="wide" caption="**Figure 1.** ..." >}}
+*/ -}}
+{{- $opts := dict "page" .Page -}}
+{{- range $k := slice "src" "alt" "caption" "title" "class" "id" "width" "height" "loading" "link" "target" "rel" "attr" "attrlink" "size" "panels" -}}
+  {{- with $.Get $k -}}{{- $opts = merge $opts (dict $k .) -}}{{- end -}}
+{{- end -}}
+{{- partial "figure.html" $opts -}}

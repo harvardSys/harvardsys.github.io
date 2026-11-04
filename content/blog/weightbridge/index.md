@@ -24,7 +24,7 @@ showToc = true
 
 RL alternates between **rollout workers**, which generate trajectories, and **trainer workers**, which use them to update the policy. ***Weight transfer*** sends the updated parameters back to rollouts. A typical system has one training engine and multiple independently running inference engines.
 
-{{< figure width="100%" src="bg-workflow.svg" alt="RL workflow linking trainer workers with multiple rollout inference engines" caption="**RL workflow.** Trajectories flow to trainers; updated weights flow back to rollout workers." >}}
+{{< figure src="bg-workflow.svg" size="large" alt="RL workflow linking trainer workers with multiple rollout inference engines" caption="**RL workflow.** Trajectories flow to trainers; updated weights flow back to rollout workers." >}}
 
 Sparse MoE models increase the parameters transferred relative to computation per token, while GPU compute improves faster than inter-node bandwidth. These two trends substantially increase weight transfer overhead in the RL pipeline and have drawn attention from [Perplexity](https://proceedings.mlsys.org/paper_files/paper/2026/file/dea9b4b6f55ae611c54065d6fc750755-Paper-Conference.pdf), [ByteDance](https://arxiv.org/abs/2604.09107), [Anyscale](https://www.anyscale.com/blog/rdt-ray-direct-transport-fast-easy-weight-syncing-for-rl-reinforcement-learning), [Miles / LMSYS](https://lmsys.org/blog/2026-04-29-p2p-update/), [Prime Intellect](https://www.primeintellect.ai/blog/nixl-modelexpress-weight-transfer), and [Ant Group](https://ant-ling.medium.com/ant-group-open-sources-awex-high-performance-weight-exchange-framework-for-trillion-parameter-3adf33b94a81).
 
@@ -44,7 +44,7 @@ This diversity creates three challenges.
 
 Specialized kernels in training and inference frameworks further increase differences in how tensors are stored on the GPU: they may split, transpose, or pad the same parameter tensor in entirely different ways. Together, these mismatches substantially complicate weight correspondence between trainers and rollouts.
 
-{{< figure width="100%" src="bg-example.svg" alt="Weight correspondence between TP2 EP2 PP2 trainers and TP1 EP2 DP2 rollouts" caption="**Layout mismatch.** Mismatched parallelism causes cross-rank weight correspondence; T0–T3 are trainer workers and R0–R3 are rollout workers." >}}
+{{< figure src="bg-example.svg" size="full" alt="Weight correspondence between TP2 EP2 PP2 trainers and TP1 EP2 DP2 rollouts" caption="**Layout mismatch.** Mismatched parallelism causes cross-rank weight correspondence; T0–T3 are trainer workers and R0–R3 are rollout workers." >}}
 
 **2. Replication and topology complicate routing.** Multiple trainers may hold the same weights, and multiple rollout workers may need them. Full-model broadcasts can deliver unneeded elements, causing redundancy, while independent fetches can overload one sender, causing *imbalance*. Efficient planning must eliminate redundant traffic and balance aggregate load across replica groups, using fast intra-node NVLink and slower inter-node RDMA appropriately.
 
@@ -59,13 +59,13 @@ Specialized kernels in training and inference frameworks further increase differ
 
 WeightBridge answers the three questions through automatic correspondence extraction, global transfer planning and execution, and backend-independent worker coordination. Extraction and planning happen once, while the resulting routing plan is reused across policy updates.
 
-{{< figure width="100%" src="ds-overview.svg" alt="WeightBridge correspondence extraction, planning, execution, and coordination" caption="**WeightBridge overview.** Planning derives correspondence and routes; execution transfers updates under the selected synchronization semantics." >}}
+{{< figure src="ds-overview.svg" size="medium" alt="WeightBridge correspondence extraction, planning, execution, and coordination" caption="**WeightBridge overview.** Planning derives correspondence and routes; execution transfers updates under the selected synchronization semantics." >}}
 
 ### 1. Extracting correspondence through backend-native weight loaders
 
 The model’s checkpoint can act as a common coordinate system between trainer and rollouts, and each backend’s existing `load_weights` function already maps checkpoint tensors into its runtime parameters. WeightBridge probes that function with identifiable index values, recovers each worker’s weight source map, and intersects trainer and rollout maps to find the correspondence between weight elements. [Layout discovery details](https://arxiv.org/html/2609.25442v1#S3.SS1)
 
-{{< figure width="100%" src="ds-specgen.svg" alt="Index probing through load_weights reveals a weight source map" caption="**Source-map extraction.** Index tensors pass through the native loader to reveal where each checkpoint element lands." >}}
+{{< figure src="ds-specgen.svg" size="small" alt="Index probing through load_weights reveals a weight source map" caption="**Source-map extraction.** Index tensors pass through the native loader to reveal where each checkpoint element lands." >}}
 
 ### 2. Planning non-redundant, load-balanced transfers
 
@@ -76,7 +76,7 @@ Two principles guide the routing plan:
 
 The planner assigns distinct slices to replicated workers, then executes three stages: **receive** slices from trainers, **exchange across rollout nodes** over RDMA, and **distribute within each node** over NVLink. [Transfer planning details](https://arxiv.org/html/2609.25442v1#S3.SS2)
 
-{{< figure width="100%" src="ds-transfer.svg" alt="Receive, external exchange over RDMA, and internal exchange over NVLink" caption="**Three-stage transfer.** TP2 trainers feed DP4 rollouts; cross-node and local exchanges reconstruct replicas while avoiding repeated full-model pulls." >}}
+{{< figure src="ds-transfer.svg" size="medium" alt="Receive, external exchange over RDMA, and internal exchange over NVLink" caption="**Three-stage transfer.** TP2 trainers feed DP4 rollouts; cross-node and local exchanges reconstruct replicas while avoiding repeated full-model pulls." >}}
 
 ### 3. Coordinating workers across synchronization modes under minimal APIs
 
@@ -109,7 +109,7 @@ def rollout_worker_process():
 
 **Minimal integration.** Trainers connect once and send updated weights; rollouts poll between inference steps.
 
-{{< figure width="100%" src="ds-apis.svg" alt="Sender and receiver APIs coordinate planning and execution" caption="**APIs & Worker coordination.** Adapters trigger planning once and execute subsequent updates through the 3 key APIs." >}}
+{{< figure src="ds-apis.svg" size="small" alt="Sender and receiver APIs coordinate planning and execution" caption="**APIs & Worker coordination.** Adapters trigger planning once and execute subsequent updates through the 3 key APIs." >}}
 
 [See the integration guide for API details and current implementation constraints.](https://github.com/meta-pytorch/monarch/blob/main/examples/weightbridge/docs/integration.md)
 
@@ -119,7 +119,7 @@ def rollout_worker_process():
 
 We evaluated WeightBridge with models from **16B to 1.03T parameters on 2–64 H100 nodes**. Each node has eight GPUs. The primary metric is **average GPU stall time (AGST) per weight transfer.** Across the four deployments, WeightBridge lowers AGST by **16.6–29.4× over Miles Broadcast** and **5.4–42.0× over Miles P2P**. Layout and replica-count studies show that global planning avoids the single-source bottleneck while keeping transfer time close to the bandwidth-based lower bound.
 
-{{< figure width="100%" src="ev-real_workload_agst_1col.svg" alt="AGST speedup over Miles Broadcast for 16B, 30B, 235B, and 1.03T models" caption="**Real-workload performance.** Bars show AGST speedup over Miles Broadcast; “Ours” denotes WeightBridge." >}}
+{{< figure src="ev-real_workload_agst_1col.svg" size="medium" alt="AGST speedup over Miles Broadcast for 16B, 30B, 235B, and 1.03T models" caption="**Real-workload performance.** Bars show AGST speedup over Miles Broadcast; “Ours” denotes WeightBridge." >}}
 
 ### Fast Integration into Different Backends
 

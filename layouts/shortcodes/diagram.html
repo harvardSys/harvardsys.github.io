@@ -1,0 +1,35 @@
+{{- /*
+  A figure written as code (HTML + CSS + inline SVG) directly in the post.
+  Because it is real page content rather than a picture, text stays at a
+  readable size and the layout can re-flow with container queries.
+
+  {{< diagram alt="What the figure shows" caption="Caption, *markdown* allowed" size="large" >}}
+  <style>
+    .d-mine { display: grid; grid-template-columns: repeat(3, 1fr); }
+    @container (max-width: 34rem) { .d-mine { grid-template-columns: 1fr; } }
+  </style>
+  <div class="d-mine"> ... </div>
+  {{< /diagram >}}
+
+  The inner code is inserted verbatim (it is not markdown-processed). Prefix
+  every class and SVG id with a name unique to the figure (".d-mine"), because
+  the styles and ids share the page with the rest of the post.
+
+  Parameters:
+    alt      text alternative; when set, the body is exposed as role="img"
+             (omit it for content that should stay readable as-is, e.g. a table)
+    caption  caption, markdown allowed
+    size     small | medium | large | full | wide  (default: column width)
+    class, id
+*/ -}}
+{{- $classes := slice "fig" "fig-diagram" -}}
+{{- with .Get "size" -}}{{- $classes = $classes | append (printf "fig--%s" .) -}}{{- end -}}
+{{- with .Get "class" -}}{{- $classes = $classes | append . -}}{{- end -}}
+<figure class="{{ delimit $classes " " }}"{{ with .Get "id" }} id="{{ . }}"{{ end }}>
+  <div class="fig-body not-prose"{{ with .Get "alt" }} role="img" aria-label="{{ . }}"{{ end }}>
+    {{- .Inner -}}
+  </div>
+  {{- with .Get "caption" }}
+  <figcaption>{{ . | markdownify }}</figcaption>
+  {{- end }}
+</figure>

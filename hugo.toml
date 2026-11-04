@@ -34,6 +34,13 @@ ignoreErrors = ["error-remote-getjson"]
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
+    # Standalone markdown images are rendered as <figure> by
+    # layouts/_default/_markup/render-image.html; a {size="wide" ...} line right
+    # after an image passes options to it (see docs/new-post.md).
+    [markup.goldmark.parser]
+      wrapStandaloneImageWithinParagraph = false
+      [markup.goldmark.parser.attribute]
+        block = true
 #  [markup.highlight]
 #    lineNos = true
 

@@ -1,0 +1,30 @@
+{{- /*
+  Markdown image render hook.
+
+  A standalone image (its own paragraph) becomes a <figure>: the title becomes
+  the caption, and block attributes on the next line set figure options:
+
+    ![Alt text](plot.png "Caption, *markdown* allowed")
+    {size="wide" panels="0,0,540,500; 540,0,540,500"}
+
+  An image inside a sentence stays a plain <img>.
+  See layouts/partials/figure.html for the options.
+*/ -}}
+{{- if .IsBlock -}}
+  {{- $opts := dict "page" .Page "src" .Destination "alt" .PlainText "caption" .Title -}}
+  {{- with .Attributes -}}
+    {{- range $k, $v := . -}}
+      {{- $opts = merge $opts (dict $k $v) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- partial "figure.html" $opts -}}
+{{- else -}}
+  {{- $src := .Destination -}}
+  {{- $u := urls.Parse $src -}}
+  {{- if not $u.IsAbs -}}
+    {{- with or (.Page.Resources.Get (strings.TrimPrefix "./" $u.Path)) (resources.Get $u.Path) -}}
+      {{- $src = .RelPermalink -}}
+    {{- end -}}
+  {{- end -}}
+  <img src="{{ $src }}" alt="{{ .PlainText }}"{{ with .Title }} title="{{ . }}"{{ end }} loading="lazy" decoding="async">
+{{- end -}}

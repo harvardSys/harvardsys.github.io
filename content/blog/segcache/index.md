@@ -32,7 +32,31 @@ In our [previous work](https://www.usenix.org/system/files/osdi20-yang.pdf), we 
 While addressing TTLs is important and has also been recognized by [Memcached](https://github.com/memcached/memcached/issues/543) and [Redis](https://news.ycombinator.com/item?id=19664483). 
 We summarize existing techniques used in Memcached, Redis, and research systems in the following table. 
 
-![Expiration techniques.](expiration.svg "A summary of existing techniques for removing expired objects.") 
+{{< diagram size="large" caption="A summary of existing techniques for removing expired objects." >}}
+<style>
+  .d-exp { width: 100%; border-collapse: collapse; font-size: 1rem; line-height: 1.3; text-align: center; }
+  .d-exp th, .d-exp td { padding: .55rem .6rem; border: 1px solid #c7ced8; }
+  .d-exp thead th { background: #3f5677; color: #fff; font-weight: 600; }
+  .d-exp tbody th { background: #4d617a; color: #fff; font-weight: 500; }
+  .d-exp .y, .d-exp .n { font-size: 1.25rem; font-weight: 700; }
+  .d-exp .y { color: #3ca83c; }
+  .d-exp .n { color: #d8392b; }
+  @container (max-width: 30rem) {
+    .d-exp { font-size: .875rem; }
+    .d-exp th, .d-exp td { padding: .45rem .35rem; }
+  }
+</style>
+<table class="d-exp">
+  <thead><tr><th scope="col">Category</th><th scope="col">Technique</th><th scope="col">Efficient</th><th scope="col">Sufficient</th></tr></thead>
+  <tbody>
+    <tr><th scope="rowgroup" rowspan="2">Lazy expiration</th><td>Delete upon re-access</td><td class="y">✓<span class="sr-only"> yes</span></td><td class="n">✗<span class="sr-only"> no</span></td></tr>
+    <tr><td>Check LRU tail</td><td class="y">✓<span class="sr-only"> yes</span></td><td class="n">✗<span class="sr-only"> no</span></td></tr>
+    <tr><th scope="rowgroup" rowspan="3">Proactive expiration</th><td>Scanning</td><td class="n">✗<span class="sr-only"> no</span></td><td class="y">✓<span class="sr-only"> yes</span></td></tr>
+    <tr><td>Sampling</td><td class="n">✗<span class="sr-only"> no</span></td><td class="n">✗<span class="sr-only"> no</span></td></tr>
+    <tr><td>Transient object pool</td><td class="y">✓<span class="sr-only"> yes</span></td><td class="n">✗<span class="sr-only"> no</span></td></tr>
+  </tbody>
+</table>
+{{< /diagram >}}
 
 The techniques fall into two categories, lazy expiration, and proactive expiration. We observe that existing techniques are either not efficient (use a lot of CPU and memory bandwidth) or not sufficient (cannot remove most expired objects). The detailed discussion can be found in [our paper](https://www.usenix.org/system/files/nsdi21-yang.pdf). 
 

@@ -85,7 +85,76 @@ knows both that the object has been reused and that keeping it now requires
 evicting something else. The cache makes the expensive decision only when the
 decision matters.
 
-![A FIFO queue where objects enter at the head and an eviction scan runs from the tail, keeping objects that were requested again and dropping objects that were never reused](fifo-second-chance.svg "One FIFO queue with one second chance: reused objects survive the scan and have their marker reset; objects never requested again are evicted from the tail")
+{{< diagram alt="A FIFO queue where objects enter at the head and an eviction scan runs from the tail, keeping objects that were requested again and dropping objects that were never reused" caption="One FIFO queue with one second chance: reused objects survive the scan and have their marker reset; objects never requested again are evicted from the tail" >}}
+<style>
+  /* Phone layouts for the three FIFO figures in this post (shared styles). */
+  .d-ff { max-width: 24rem; margin-inline: auto; color: #171816; }
+  .d-ff-t { font-size: 1.0625rem; font-weight: 600; }
+  .d-ff-s { margin: .2rem 0 1.1rem; font-size: .875rem; color: #52514e; }
+  .d-ff-lbl { font-size: .8125rem; font-weight: 600; color: #52514e; }
+  .d-ff-m { font-size: .75rem; line-height: 1.3; color: #77756e; }
+  .d-ff-q { display: flex; gap: .4rem; }
+  .d-ff-q.v { flex-direction: column; }
+  .d-ff-b { display: grid; place-items: center; width: 2.75rem; height: 2.5rem; background: #e9e6dc;
+             border: 1.5px solid #cbc8bc; border-radius: 6px; }
+  .d-ff-b.g { width: 1.9rem; height: 2.2rem; border-style: dashed; }
+  .d-ff-o, .d-ff-k { position: relative; display: block; width: 1.25rem; height: 1.25rem; border-radius: 50%; }
+  .d-ff-o { border: 2.2px solid #898781; }
+  .d-ff-k { background: #1baf7a; }
+  .d-ff-k::after { content: ""; position: absolute; left: .43rem; top: .22rem; width: .3rem; height: .58rem;
+                    border: solid #fff; border-width: 0 2.4px 2.4px 0; transform: rotate(45deg); }
+  .d-ff-blue { color: #2a78d6; } .d-ff-green { color: #1baf7a; } .d-ff-red { color: #e8502c; } .d-ff-gold { color: #b8862f; }
+  /* Arrows: a line in currentColor with a head; .v = vertical, .up/.left reverse it, .dash = dashed */
+  .d-ff-a { position: relative; display: block; height: 2.4px; background: currentColor; }
+  .d-ff-a::after { content: ""; position: absolute; top: 50%; right: -1px; transform: translateY(-50%);
+                    border: 5.5px solid transparent; border-left: 10px solid currentColor; border-right: 0; }
+  .d-ff-a.left::after { right: auto; left: -1px; border-left: 0; border-right: 10px solid currentColor; }
+  .d-ff-a.v { width: 2.4px; height: auto; }
+  .d-ff-a.v::after { top: auto; right: auto; bottom: -1px; left: 50%; transform: translateX(-50%);
+                      border: 5.5px solid transparent; border-top: 10px solid currentColor; border-bottom: 0; }
+  .d-ff-a.v.up::after { bottom: auto; top: -1px; border-top: 0; border-bottom: 10px solid currentColor; }
+  .d-ff-a.dash { background: repeating-linear-gradient(to right, currentColor 0 5px, transparent 5px 10px); }
+  .d-ff-a.v.dash { background: repeating-linear-gradient(to bottom, currentColor 0 5px, transparent 5px 10px); }
+  .d-ff-leg { display: grid; gap: .45rem; margin-top: 1.1rem; font-size: .8125rem; color: #52514e; }
+  .d-ff-leg > div { display: flex; align-items: center; gap: .6rem; }
+  .d-ff-leg i { flex: none; }
+
+  /* One FIFO queue, one second chance */
+  .d-sc { display: grid; grid-template-columns: minmax(0, 1fr) 2.75rem 2.25rem minmax(0, 1.4fr); column-gap: .6rem; align-items: center; }
+  .d-sc > .c2 { grid-column: 2; justify-self: center; }
+  .d-sc .in { height: 1.9rem; margin: .3rem 0 .35rem; }
+  .d-sc .out { height: 1.9rem; margin: .35rem 0 .3rem; }
+  .d-sc .side { grid-column: 1; grid-row: 3; text-align: right; }
+  .d-sc .side.head { align-self: start; margin-top: .55rem; }
+  .d-sc .side.tail { align-self: end; margin-bottom: .55rem; }
+  .d-sc .scan { grid-column: 3; grid-row: 3; justify-self: center; align-self: stretch; margin: 1.1rem 0; color: #898781; }
+  .d-sc .scan-t { grid-column: 4; grid-row: 3; }
+  .d-sc .ev { grid-column: 3 / 5; grid-row: 4; }
+  .d-sc .gone { opacity: .55; }
+</style>
+<img class="fig-wide-only" src="fifo-second-chance.svg" alt="" width="760" height="340" loading="lazy" decoding="async">
+<div class="d-ff fig-narrow-only">
+  <div class="d-ff-t">One FIFO queue, one second chance</div>
+  <div class="d-ff-s">Objects enter at the head; an eviction scan from the tail keeps the reused and drops the one-hit.</div>
+  <div class="d-sc">
+    <span class="c2 d-ff-lbl d-ff-blue" style="white-space: nowrap">new object</span>
+    <i class="c2 in d-ff-a v d-ff-blue"></i>
+    <span class="side head d-ff-m">head<br>(newest)</span>
+    <div class="c2 d-ff-q v" style="grid-row: 3"><span class="d-ff-b"><i class="d-ff-o"></i></span><span class="d-ff-b"><i class="d-ff-k"></i></span><span class="d-ff-b"><i class="d-ff-o"></i></span><span class="d-ff-b"><i class="d-ff-o"></i></span><span class="d-ff-b"><i class="d-ff-k"></i></span><span class="d-ff-b"><i class="d-ff-o"></i></span></div>
+    <span class="side tail d-ff-m">tail<br>(oldest)</span>
+    <i class="scan d-ff-a v up dash"></i>
+    <span class="scan-t d-ff-m">eviction scan sweeps from the tail, clearing the marker on each reused object it passes</span>
+    <i class="c2 out d-ff-a v d-ff-red" style="grid-row: 4"></i>
+    <span class="ev d-ff-lbl d-ff-red">evict</span>
+    <i class="c2 d-ff-o gone"></i>
+    <span class="ev d-ff-m" style="grid-row: 5">never reused</span>
+  </div>
+  <div class="d-ff-leg">
+    <div><i class="d-ff-k"></i>requested again since insertion: survives, marker reset</div>
+    <div><i class="d-ff-o"></i>never requested again: evicted on the scan</div>
+  </div>
+</div>
+{{< /diagram >}}
 
 This idea produced two related algorithms:
 [S3-FIFO](https://dl.acm.org/doi/10.1145/3600006.3613147)[^s3fifo] and
@@ -119,7 +188,50 @@ The queues have different jobs: the small queue supplies quick demotion, the
 main queue supplies lazy promotion, and the ghost queue connects evidence
 across cache residencies.
 
-![S3-FIFO routes new objects through a small queue that either drops them or promotes them to a larger main queue, while a ghost queue of evicted keys can route a late repeat request straight into the main queue](s3fifo-architecture.svg "S3-FIFO: a small queue filters new objects, a ghost queue remembers what it dropped, and a main queue protects anything reused")
+{{< diagram alt="S3-FIFO routes new objects through a small queue that either drops them or promotes them to a larger main queue, while a ghost queue of evicted keys can route a late repeat request straight into the main queue" caption="S3-FIFO: a small queue filters new objects, a ghost queue remembers what it dropped, and a main queue protects anything reused" >}}
+<style>
+  /* S3-FIFO, phone layout: S runs left to right, the queues then snake back up the
+     right-hand side, so promotion and ghost hits both land on M's head. */
+  .d-s3 { display: grid; grid-template-columns: minmax(0, 1fr) 2.6rem; column-gap: .35rem; }
+  .d-s3 > * { grid-column: 1; }
+  .d-s3 .row { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; }
+  .d-s3 .lbl { margin: .9rem 0 .4rem; }
+  .d-s3 .lbl:first-child { margin-top: 0; }
+  .d-s3 .ends { display: flex; justify-content: space-between; margin-top: .2rem; }
+  .d-s3 .drop { display: flex; align-items: stretch; justify-content: flex-end; gap: .6rem; height: 2.6rem; margin-top: .25rem;
+                 padding-right: calc(1.375rem - 1.2px); text-align: right; }
+  .d-s3 .drop .d-ff-m { align-self: center; }
+  .d-s3 .ghost-hit { padding-right: calc(.95rem - 1.2px); }
+  .d-s3 .promote { position: relative; grid-column: 2; grid-row: 2 / 10; margin: 1.25rem .8rem 1.25rem -.1rem;
+                    border: 2.4px solid #1baf7a; border-left: 0; border-radius: 0 .6rem .6rem 0; color: #1baf7a; }
+  .d-s3 .promote::after { content: ""; position: absolute; bottom: -7px; left: -1px; border: 5.5px solid transparent;
+                          border-right: 10px solid currentColor; border-left: 0; }
+  .d-s3 .promote span { position: absolute; top: 50%; left: 100%; transform: translate(-50%, -50%) rotate(180deg);
+                         padding: .3rem 0; writing-mode: vertical-rl; background: #fff; font-size: .75rem; white-space: nowrap; }
+  .d-s3 .exit { width: 2.1rem; }
+</style>
+<img class="fig-wide-only" src="s3fifo-architecture.svg" alt="" width="960" height="270" loading="lazy" decoding="async">
+<div class="d-ff fig-narrow-only">
+  <div class="d-ff-t">S3-FIFO: filter first, protect later</div>
+  <div class="d-ff-s">Three queues: a small filter, a ghost of what it dropped, and a larger main queue.</div>
+  <div class="d-s3">
+    <div class="lbl d-ff-lbl">small queue (S): ~10% of capacity</div>
+    <div class="row"><span class="d-ff-m d-ff-blue">new</span><i class="d-ff-a d-ff-blue" style="width: 1.75rem"></i><span class="d-ff-b"><i class="d-ff-o"></i></span><span class="d-ff-b"><i class="d-ff-k"></i></span><span class="d-ff-b"><i class="d-ff-o"></i></span></div>
+    <div class="ends d-ff-m"><span></span><span>tail</span></div>
+    <div class="drop"><span class="d-ff-m d-ff-red">one-hit → drop,<br>keep only its key</span><i class="d-ff-a v d-ff-red"></i></div>
+    <div class="lbl d-ff-lbl">ghost queue (G): keys only, no data</div>
+    <div class="row"><span class="d-ff-b g"></span><span class="d-ff-b g"></span><span class="d-ff-b g"></span><span class="d-ff-b g"></span></div>
+    <div class="drop ghost-hit"><span class="d-ff-m d-ff-gold">ghost hit → insert<br>into main, skip S</span><i class="d-ff-a v dash d-ff-gold"></i></div>
+    <div class="lbl d-ff-lbl">main queue (M): the rest of the cache</div>
+    <div class="row">
+      <span class="d-ff-m" style="text-align: center">checked</span><i class="exit d-ff-a left dash" style="color: #898781"></i><span class="d-ff-b"><i class="d-ff-o"></i></span><span class="d-ff-b"><i class="d-ff-k"></i></span><span class="d-ff-b"><i class="d-ff-o"></i></span><span class="d-ff-b"><i class="d-ff-k"></i></span>
+    </div>
+    <div class="ends d-ff-m"><span style="margin-left: 5.2rem">tail</span><span>head</span></div>
+    <div class="d-ff-m" style="margin-top: .6rem">At M's tail: reused → reinserted at the head; freq 0 → evicted.</div>
+    <div class="promote"><span>reused → promote to main</span></div>
+  </div>
+</div>
+{{< /diagram >}}
 
 ## SIEVE: leave the object where it is
 
@@ -141,7 +253,57 @@ needs no lock on the global eviction order. The design is simple enough to add
 to an existing cache in a few lines, yet the parked hand prevents the repeated
 tail scans that would otherwise waste work.
 
-![SIEVE keeps one queue with a hand pointer that steps from the tail toward the head, clearing the visited bit and leaving an object in place if it was reused, or evicting it on the spot if not, then wrapping back to the tail](sieve-architecture.svg "SIEVE holds one queue and lets a hand carry its position across evictions instead of rescanning from the tail")
+{{< diagram alt="SIEVE keeps one queue with a hand pointer that steps from the tail toward the head, clearing the visited bit and leaving an object in place if it was reused, or evicting it on the spot if not, then wrapping back to the tail" caption="SIEVE holds one queue and lets a hand carry its position across evictions instead of rescanning from the tail" >}}
+<style>
+  /* SIEVE, phone layout: the queue runs top (head) to bottom (tail); the hand climbs it. */
+  .d-sv { --pitch: 2.9rem; display: grid; grid-template-columns: 4.5rem 2.75rem minmax(0, 1fr); column-gap: .75rem; }
+  .d-sv .new { grid-column: 2; justify-self: center; }
+  .d-sv .in { grid-column: 2; justify-self: center; height: 1.6rem; margin: .25rem 0 .35rem; }
+  .d-sv .q { grid-column: 2; grid-row: 3; }
+  .d-sv .q .d-ff-b { position: relative; }
+  .d-sv .q .d-ff-k { position: absolute; }
+  .d-sv .rail { position: relative; grid-column: 1; grid-row: 3; }
+  .d-sv .hand { position: absolute; right: .1rem; bottom: .55rem; display: flex; align-items: center; gap: .3rem;
+                 font-size: .75rem; animation: d-sv-hand 9s infinite; }
+  .d-sv .hand .d-ff-a { width: 1.4rem; }
+  .d-sv .ends { grid-column: 3; grid-row: 3; display: flex; flex-direction: column; justify-content: space-between; padding: .7rem 0; }
+  .d-sv .notes { grid-column: 1 / 4; display: grid; gap: .4rem; margin-top: 1rem; }
+  .d-sv .f6 { animation: d-sv-f6 9s infinite; } .d-sv .f5 { animation: d-sv-f5 9s infinite; }
+  .d-sv .f3 { animation: d-sv-f3 9s infinite; } .d-sv .f1 { animation: d-sv-f1 9s infinite; }
+  .d-sv .c4 { animation: d-sv-c4 9s infinite; } .d-sv .c2 { animation: d-sv-c2 9s infinite; }
+  /* Same 9 s schedule as the wide SVG: the hand pauses on each object from the tail up. */
+  @keyframes d-sv-hand {
+    0%, 13.3% { transform: translateY(0); }
+    16.7%, 30% { transform: translateY(calc(-1 * var(--pitch))); }
+    33.3%, 46.7% { transform: translateY(calc(-2 * var(--pitch))); }
+    50%, 63.3% { transform: translateY(calc(-3 * var(--pitch))); }
+    66.7%, 80% { transform: translateY(calc(-4 * var(--pitch))); }
+    83.3%, 100% { transform: translateY(calc(-5 * var(--pitch))); }
+  }
+  @keyframes d-sv-f6 { 0%, 5.9% { opacity: 1; } 6%, 96.9% { opacity: .15; } 97% { opacity: 1; } }
+  @keyframes d-sv-f5 { 0%, 19.9% { opacity: 1; } 20%, 96.9% { opacity: .15; } 97% { opacity: 1; } }
+  @keyframes d-sv-f3 { 0%, 52.9% { opacity: 1; } 53%, 96.9% { opacity: .15; } 97% { opacity: 1; } }
+  @keyframes d-sv-f1 { 0%, 85.9% { opacity: 1; } 86%, 96.9% { opacity: .15; } 97% { opacity: 1; } }
+  @keyframes d-sv-c4 { 0%, 36.9% { opacity: 1; } 37%, 96.9% { opacity: 0; } 97% { opacity: 1; } }
+  @keyframes d-sv-c2 { 0%, 69.9% { opacity: 1; } 70%, 96.9% { opacity: 0; } 97% { opacity: 1; } }
+</style>
+<img class="fig-wide-only" src="sieve-architecture.svg" alt="" width="960" height="196" loading="lazy" decoding="async">
+<div class="d-ff fig-narrow-only">
+  <div class="d-ff-t">SIEVE: leave the object where it is</div>
+  <div class="d-ff-s">One queue. The hand holds its position between evictions instead of rescanning from the tail.</div>
+  <div class="d-sv">
+    <span class="new d-ff-m d-ff-blue">new</span>
+    <i class="in d-ff-a v d-ff-blue"></i>
+    <div class="rail"><span class="hand d-ff-red"><b>hand</b><i class="d-ff-a"></i></span></div>
+    <div class="q d-ff-q v"><span class="d-ff-b"><i class="d-ff-o f1"></i></span><span class="d-ff-b"><i class="d-ff-o"></i><i class="d-ff-k c2"></i></span><span class="d-ff-b"><i class="d-ff-o f3"></i></span><span class="d-ff-b"><i class="d-ff-o"></i><i class="d-ff-k c4"></i></span><span class="d-ff-b"><i class="d-ff-o f5"></i></span><span class="d-ff-b"><i class="d-ff-o f6"></i></span></div>
+    <div class="ends d-ff-m"><span>head</span><span>tail</span></div>
+    <div class="notes d-ff-m">
+      <div><b>visited</b> → clear the bit, leave the object in place, step toward the head</div>
+      <div><b>not visited</b> → evict here; the hand keeps this position for the next eviction</div>
+    </div>
+  </div>
+</div>
+{{< /diagram >}}
 
 | | S3-FIFO | SIEVE |
 | --- | --- | --- |

@@ -46,7 +46,35 @@ We found it helpful to organize smart caches along two axes:
 
 That gives a simple two-by-two view of the space:
 
-![A two-by-two grid with learning granularity (object vs. cache level) on one axis and prediction frequency (every miss vs. periodic) on the other. LRB, LHD, and 3L-Cache occupy object-level/every-miss. GL-Cache occupies object-level/periodic. ARC and LeCaR occupy cache-level/every-miss. The cache-level/periodic quadrant is the space explored by Learning-Augmented Heuristics.](lah-taxon.svg "Periodic, cache-level learning is the design point explored by Learning-Augmented Heuristics")
+{{< diagram size="small" alt="A two-by-two grid with learning objective (object vs. cache level) on one axis and prediction frequency (every miss vs. periodic) on the other. LRB, LHD, and 3L-Cache occupy object-level/every-miss. GL-Cache occupies object-level/periodic. ARC and LeCaR occupy cache-level/every-miss. The cache-level/periodic quadrant is the space explored by Learning-Augmented Heuristics (S4-FIFO)." caption="Periodic, cache-level learning is the design point explored by Learning-Augmented Heuristics" >}}
+<style>
+  .d-tx { --tx-teal: #4f8c8d; --tx-purple: #7a5a8c;
+          display: grid; grid-template-columns: 1.9rem 1fr 1fr 1.9rem; text-align: center; color: #000; }
+  .d-tx-c { padding-bottom: .45rem; font-size: 1.0625rem; font-weight: 700; }
+  .d-tx-cell { display: flex; align-items: center; justify-content: center; aspect-ratio: 1 / .95;
+               padding: .5rem; background: #f3f3f3; border: solid #000; border-width: 0 1.5px 1.5px 0;
+               font-size: 1.0625rem; line-height: 1.3; }
+  .d-tx-cell.top { border-top-width: 1.5px; }
+  .d-tx-cell.left { border-left-width: 1.5px; }
+  .d-tx-cell.lah { font-weight: 700; }
+  .d-tx-axis { font-size: 1.1875rem; }
+  .d-tx-v { writing-mode: vertical-rl; transform: rotate(180deg); }
+  .d-tx-y { grid-row: 2 / 4; padding-left: .3rem; }
+  .d-tx-x { grid-column: 2 / 4; padding-top: .5rem; }
+  .d-tx-r { padding-right: .3rem; font-size: 1rem; font-weight: 700; }
+</style>
+<div class="d-tx">
+  <span></span><span class="d-tx-c" style="color: var(--tx-teal)">Every miss</span><span class="d-tx-c" style="color: var(--tx-purple)">Periodic</span><span></span>
+  <span class="d-tx-axis d-tx-v d-tx-y">Learning objective</span>
+  <span class="d-tx-cell top left">ARC<br>LeCaR</span>
+  <span class="d-tx-cell top lah">Learning-Augmented Heuristics (S4-FIFO)</span>
+  <span class="d-tx-v d-tx-r" style="color: var(--tx-purple)">Cache level</span>
+  <span class="d-tx-cell left">LRB<br>LHD<br>3L-Cache</span>
+  <span class="d-tx-cell">GL-Cache</span>
+  <span class="d-tx-v d-tx-r" style="color: var(--tx-teal)">Object level</span>
+  <span></span><span class="d-tx-axis d-tx-x">Prediction frequency</span>
+</div>
+{{< /diagram >}}
 
 Most prior work occupies three of these four regions. LAH focuses on the fourth: periodic, cache-level learning. At this granularity, the model can reason about aggregate workload behavior without participating in every eviction decision.
 
@@ -64,7 +92,92 @@ meaningful knobs. Let the cache collect lightweight aggregate statistics about
 the workload, then use a pre-trained model to choose a
 configuration for those knobs asynchronously.
 
-![The cache is split into a data plane, which handles GETs, PUTs, and evictions using the current heuristic configuration, and a control plane, which periodically collects workload statistics and uses a pre-trained model to update that configuration.](lah-data-control-plane.svg "The data plane stays fast and simple; the control plane runs periodically, off the critical path")
+{{< diagram alt="The cache is split into a data plane, which handles GETs, PUTs, and evictions using the current heuristic configuration, and a control plane, which periodically collects workload statistics and uses a pre-trained model to update that configuration. In the data plane, a lightweight sketch feeds a feature collector; exported features become a feature vector in the control plane, model inference turns it into predicted knobs, and those are applied back to the parameterized cache." caption="The data plane stays fast and simple; the control plane runs periodically, off the critical path" >}}
+<style>
+  .d-dc { --dc-teal: #216b64; --dc-teal-2: #3f7f79; --dc-pur: #4e2a73; --dc-pur-2: #7a3fa0; --dc-m: 1.4rem;
+          display: grid; grid-template-columns: minmax(0, 1fr) 8.5rem minmax(0, 1fr);
+          grid-template-rows: auto auto 5.75rem auto; color: #1b2430; }
+  .d-dc-bg { border-radius: .6rem; }
+  .d-dc-bg.data { grid-area: 1 / 1 / 5 / 2; background: #e9f4f2; }
+  .d-dc-bg.ctrl { grid-area: 1 / 3 / 5 / 4; background: #f2ecf8; }
+  .d-dc-t { padding: 1.1rem var(--dc-m) 1rem; font-size: .9375rem; font-weight: 700; line-height: 1.3; }
+  .d-dc-t b { display: block; font-size: 1.0625rem; letter-spacing: .03em; }
+  .d-dc-t.data { grid-area: 1 / 1; color: var(--dc-teal); }
+  .d-dc-t.ctrl { grid-area: 1 / 3; color: var(--dc-pur); }
+  .d-dc-box { display: flex; align-items: center; justify-content: center; min-height: 4.25rem; margin: 0 var(--dc-m);
+              padding: .6rem .75rem; background: #fff; border: 2px solid var(--dc-teal); border-radius: .5rem;
+              font-size: 1.0625rem; font-weight: 700; line-height: 1.3; text-align: center; }
+  .d-dc-box.cache { grid-area: 2 / 1; }
+  .d-dc-box.coll { grid-area: 4 / 1; }
+  .d-dc-box.knobs { grid-area: 2 / 3; border-color: var(--dc-pur-2); }
+  .d-dc-box.fvec { grid-area: 4 / 3; border-color: var(--dc-pur-2); }
+  .d-dc-box.coll, .d-dc-box.fvec, .d-dc-a.export { margin-bottom: var(--dc-m); }
+  /* Solid arrows between the planes */
+  .d-dc-a { position: relative; align-self: center; height: 2px; margin-inline: calc(-1 * var(--dc-m)); background: currentColor; }
+  .d-dc-a::after { content: ""; position: absolute; top: 50%; right: -2px; transform: translateY(-50%);
+                   border: 6px solid transparent; border-left: 11px solid currentColor; border-right: 0; }
+  .d-dc-a.apply::after { right: auto; left: -2px; border-left: 0; border-right: 11px solid currentColor; }
+  .d-dc-a span { position: absolute; bottom: .45rem; left: 0; right: 0; font-size: .875rem; font-weight: 700; line-height: 1.25; text-align: center; }
+  .d-dc-a.apply { grid-area: 2 / 2; color: var(--dc-pur); }
+  .d-dc-a.export { grid-area: 4 / 2; color: var(--dc-teal); }
+  /* Dotted arrows inside a plane */
+  .d-dc-v { position: relative; display: flex; justify-content: center; font-size: .875rem; font-weight: 700; line-height: 1.25; }
+  .d-dc-v i { position: relative; margin: .35rem 0; border-left: 3px dotted currentColor; }
+  .d-dc-v i::after { content: ""; position: absolute; left: -7.5px; border: 6px solid transparent; }
+  .d-dc-v.down i::after { bottom: -6px; border-top: 10px solid currentColor; border-bottom: 0; }
+  .d-dc-v.up i::after { top: -6px; border-bottom: 10px solid currentColor; border-top: 0; }
+  .d-dc-v .l, .d-dc-v .r { position: absolute; top: 50%; transform: translateY(-50%); }
+  .d-dc-v .l { right: calc(50% + 1rem); text-align: right; }
+  .d-dc-v .r { left: calc(50% + 1rem); text-align: left; }
+  .d-dc-v.sketch { grid-area: 3 / 1; color: var(--dc-teal-2); }
+  .d-dc-v.infer { grid-area: 3 / 3; color: var(--dc-pur-2); }
+  .d-dc-v svg { width: 4.25rem; }
+  .d-dc-loop { display: none; }
+
+  /* Narrow: stack the planes and draw "apply params" as a return bracket on the right. */
+  @container (max-width: 38rem) {
+    .d-dc { --dc-m: 1rem; grid-template-columns: minmax(0, 1fr) 2.6rem;
+            grid-template-rows: auto auto 4.25rem auto 4.5rem auto auto 4.25rem auto; }
+    .d-dc-bg.data { grid-area: 1 / 1 / 5 / 2; }
+    .d-dc-bg.ctrl { grid-area: 6 / 1 / 10 / 2; }
+    .d-dc-t { padding: .9rem var(--dc-m) .8rem; }
+    .d-dc-t.ctrl { grid-area: 6 / 1; }
+    .d-dc-box { min-height: 3.5rem; font-size: 1rem; }
+    .d-dc-box.fvec { grid-area: 7 / 1; margin-bottom: 0; }
+    .d-dc-box.knobs { grid-area: 9 / 1; margin-bottom: var(--dc-m); }
+    .d-dc-v.infer { grid-area: 8 / 1; }
+    .d-dc-v.infer.up i::after { top: auto; bottom: -6px; border-top: 10px solid currentColor; border-bottom: 0; }
+    .d-dc-a.export { grid-area: 5 / 1; justify-self: center; align-self: stretch; width: 2px; height: auto; margin: .4rem 0; }
+    .d-dc-a.export::after { top: auto; bottom: -2px; right: auto; left: 50%; transform: translateX(-50%);
+                            border: 6px solid transparent; border-top: 11px solid currentColor; border-bottom: 0; }
+    .d-dc-a.export span { bottom: auto; top: 50%; left: 1rem; right: auto; transform: translateY(-50%); white-space: nowrap; text-align: left; }
+    .d-dc-a.apply { display: none; }
+    .d-dc-loop { display: block; position: relative; grid-area: 2 / 2 / 10 / 3; margin: 1.75rem .9rem 2.75rem calc(-1 * var(--dc-m));
+                 border: 2px solid var(--dc-pur); border-left: 0; border-radius: 0 .6rem .6rem 0; color: var(--dc-pur); }
+    .d-dc-loop::after { content: ""; position: absolute; top: -7px; left: -2px; border: 6px solid transparent; border-right: 11px solid currentColor; border-left: 0; }
+    .d-dc-loop span { position: absolute; top: 50%; left: 100%; transform: translate(-50%, -50%) rotate(180deg); padding: .4rem 0;
+                      writing-mode: vertical-rl; background: #fff; font-size: .875rem; font-weight: 700; white-space: nowrap; }
+  }
+</style>
+<div class="d-dc">
+  <div class="d-dc-bg data"></div>
+  <div class="d-dc-bg ctrl"></div>
+  <div class="d-dc-t data"><b>DATA PLANE</b>Online, Simple, O(1)</div>
+  <div class="d-dc-t ctrl"><b>CONTROL PLANE</b>Async, Periodic</div>
+  <div class="d-dc-box cache">Parameterized cache (Heuristic)</div>
+  <div class="d-dc-v down sketch"><i></i><span class="l">Lightweight<br>Sketch</span></div>
+  <div class="d-dc-box coll">Feature Collector</div>
+  <div class="d-dc-a export"><span>Export<br>Features</span></div>
+  <div class="d-dc-box fvec">Feature Vector</div>
+  <div class="d-dc-v up infer">
+    <span class="l"><svg viewBox="0 0 68 46" aria-hidden="true"><g fill="#fff" stroke="#6b7280" stroke-width="1.3"><path d="M34 8 L20 22 M34 8 L48 22 M20 22 L11 37 M20 22 L29 37 M48 22 L41 37 M48 22 L57 37" fill="none"/><circle cx="34" cy="7" r="5"/><circle cx="20" cy="22" r="5"/><circle cx="48" cy="22" r="5"/><circle cx="11" cy="38" r="5"/><circle cx="29" cy="38" r="5" fill="#4a7fc1"/><circle cx="41" cy="38" r="5"/><circle cx="57" cy="38" r="5"/></g></svg></span>
+    <i></i><span class="r">Model<br>Inference</span>
+  </div>
+  <div class="d-dc-box knobs">Predicted Knobs</div>
+  <div class="d-dc-a apply"><span>Apply<br>Params</span></div>
+  <div class="d-dc-loop"><span>Apply Params</span></div>
+</div>
+{{< /diagram >}}
 
 This naturally separates the system into a **data plane** and a **control
 plane**.
@@ -89,7 +202,66 @@ configurations, measure the resulting miss ratios, and identify the configuratio
 that work well. Those best-performing configurations become labels, which we pair
 with the features collected from the same workload.
 
-![Many training traces are each converted into cache-level features and paired with the best configuration found by grid search over that trace. These (feature, configuration) pairs from many workloads train a single model offline, which is then deployed to configure the heuristic on new, unseen workloads.](lah-offline-pretrain.svg "LAH trains once, offline, across many workloads, then deploys without retraining")
+{{< diagram alt="Many training traces are each converted into cache-level features and paired with the best configuration found by grid search over that trace. These (feature, configuration) pairs from many workloads train a single model offline, which is then deployed to configure the heuristic on new, unseen workloads. Steps: production traces (4140 from 14 sources), parameter grid search with miss ratio as the label, and a training corpus that serves as the knowledge base." caption="LAH trains once, offline, across many workloads, then deploys without retraining" >}}
+<style>
+  .d-pt { display: grid; grid-template-columns: minmax(0, 1fr) 2.75rem minmax(0, 1fr) 2.75rem minmax(0, 1fr);
+          row-gap: 1.25rem; align-items: center; color: #1b2430; }
+  .d-pt-box { display: flex; flex-direction: column; justify-content: center; align-self: stretch; min-height: 7rem;
+              padding: .75rem; border: 2px solid #7a5f96; border-radius: .6rem; text-align: center; }
+  .d-pt-box b { font-size: 1.25rem; line-height: 1.2; }
+  .d-pt-box span { margin-top: .2rem; font-size: 1rem; color: #6b7785; }
+  .d-pt-arr { position: relative; height: 2px; margin: 0 .45rem; background: #4e2a73; }
+  .d-pt-arr::after { content: ""; position: absolute; top: 50%; right: -2px; transform: translateY(-50%);
+                     border: 6px solid transparent; border-left: 11px solid #4e2a73; border-right: 0; }
+  .d-pt-ic { grid-row: 2; justify-self: center; position: relative; font-size: .8125rem; }
+  .d-pt-ic:nth-of-type(1) { grid-column: 1; } .d-pt-ic:nth-of-type(2) { grid-column: 3; } .d-pt-ic:nth-of-type(3) { grid-column: 5; }
+  .d-pt-stack { width: 12em; height: 6em; }
+  .d-pt-stack > div { position: absolute; display: flex; }
+  .d-pt-stack span { display: block; padding: .3em .6em; border: 1px solid #8d9298; background: #eee;
+                     box-shadow: 2px 2px 3px rgb(0 0 0 / .3); white-space: nowrap; line-height: 1.3; }
+  .d-pt-stack .mr { background: #e06666; border-color: #b84a4a; color: #fff; }
+  .d-pt-ic.traces span { width: 8.5em; text-align: center; }
+  .d-pt-ic.grid { width: 14em; }
+  .d-pt-ic.grid span:first-child { width: 7.5em; }
+  .d-pt-ic svg { display: block; width: 4.5em; height: auto; }
+  @container (max-width: 38rem) {
+    .d-pt { grid-template-columns: minmax(0, 1fr) auto; row-gap: 0; column-gap: .9rem; }
+    .d-pt-box { min-height: 5rem; }
+    .d-pt-box b { font-size: 1.0625rem; }
+    .d-pt-box span { font-size: .875rem; }
+    .d-pt-arr { grid-column: 1; justify-self: center; width: 2px; height: 2rem; margin: .4rem 0 .5rem; }
+    .d-pt-arr::after { top: auto; bottom: -2px; right: auto; left: 50%; transform: translateX(-50%);
+                       border: 6px solid transparent; border-top: 11px solid #4e2a73; border-bottom: 0; }
+    .d-pt-ic { grid-row: auto; font-size: .625rem; }
+    .d-pt-ic:nth-of-type(1) { grid-area: 1 / 2; } .d-pt-ic:nth-of-type(2) { grid-area: 3 / 2; } .d-pt-ic:nth-of-type(3) { grid-area: 5 / 2; }
+    .d-pt-box:nth-of-type(1) { grid-area: 1 / 1; } .d-pt-box:nth-of-type(2) { grid-area: 3 / 1; } .d-pt-box:nth-of-type(3) { grid-area: 5 / 1; }
+    .d-pt-arr:nth-of-type(1) { grid-area: 2 / 1; } .d-pt-arr:nth-of-type(2) { grid-area: 4 / 1; }
+    .d-pt-ic.traces { width: 11em; }
+    .d-pt-ic.grid { width: 13.5em; }
+    .d-pt-ic.db { width: 11em; display: flex; justify-content: center; }
+  }
+</style>
+<div class="d-pt">
+  <div class="d-pt-box"><b>Production traces</b><span>4140 from 14 sources</span></div>
+  <i class="d-pt-arr"></i>
+  <div class="d-pt-box"><b>Parameter Grid Search</b><span>Miss Ratio as Label</span></div>
+  <i class="d-pt-arr"></i>
+  <div class="d-pt-box"><b>Training Corpus</b><span>Knowledge Base</span></div>
+  <section class="d-pt-ic d-pt-stack traces" aria-hidden="true">
+    <div style="left: 2em; top: 0"><span>Tencent Block</span></div>
+    <div style="left: 1em; top: 1.6em"><span>Twitter</span></div>
+    <div style="left: 0; top: 3.2em"><span>Meta CDN</span></div>
+  </section>
+  <section class="d-pt-ic d-pt-stack grid" aria-hidden="true">
+    <div style="left: 2em; top: 0"><span>params set N</span><span class="mr">MR N</span></div>
+    <div style="left: 1em; top: 1.6em"><span>params set 2</span><span class="mr">MR 2</span></div>
+    <div style="left: 0; top: 3.2em"><span>params set 1</span><span class="mr">MR 1</span></div>
+  </section>
+  <section class="d-pt-ic db" aria-hidden="true">
+    <svg viewBox="0 0 60 56"><g fill="none" stroke="#000" stroke-width="4"><rect x="4" y="3" width="52" height="15" rx="7.5"/><rect x="4" y="21" width="52" height="15" rx="7.5"/><rect x="4" y="39" width="52" height="15" rx="7.5"/></g><g fill="#000"><circle cx="45" cy="10.5" r="2.6"/><circle cx="45" cy="28.5" r="2.6"/><circle cx="45" cy="46.5" r="2.6"/></g></svg>
+  </section>
+</div>
+{{< /diagram >}}
 
 Because the features describe access patterns rather than object identities, the
 same model can accumulate knowledge across different workloads.
