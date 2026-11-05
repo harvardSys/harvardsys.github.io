@@ -24,7 +24,7 @@ Coding agents repeatedly send their growing context with each LLM request. Most 
 
 The median request contains about **129,000 input tokens, with only about 500 uncached**. Outputs are much shorter, at roughly 200 tokens. In other words, each request introduces relatively little new prefill and decoding work.
 
-As a result, **cached input accounts for 97.4% of input-token volume and 72.9% of modeled API cost** among requests with reported cache usage. Although cached tokens are much cheaper individually, their enormous volume makes them the largest contributor to cost. Our analysis uses reference prices of 1 per million cached input tokens, 10 per million fresh input tokens, and 50 per million output tokens.
+As a result, **cached input accounts for 97.4% of input-token volume and 72.9% of modeled API cost** among requests with reported cache usage. Although cached tokens are much cheaper individually, their enormous volume makes them the largest contributor to cost. Our analysis uses reference prices of <span>$</span>1 per million cached input tokens, <span>$</span>10 per million fresh input tokens, and <span>$</span>50 per million output tokens.
 
 {{< diagram size="medium" caption="*Figure 1.* Requests carry long inputs with little new text. Repeated cache reads account for most modeled session cost." >}}
 <div class="fig-plots">
@@ -178,16 +178,16 @@ Interestingly, avoiding mutations is not always better. In our what-if analysis,
 </div>
 {{< /diagram >}}
 
-Implications: **Agent harnesses and serving systems** should be designed with prefix reuse in mind. Harnesses should keep stable instructions and tool definitions consistent to avoid unnecessary cache invalidation. **Users** should use context reductions strategically to control context growth and future cache-read and miss costs.
+**Implications:** **Agent harnesses and serving systems** should be designed with prefix reuse in mind. Harnesses should keep stable instructions and tool definitions consistent to avoid unnecessary cache invalidation. **Users** should use context reductions strategically to control context growth and future cache-read and miss costs.
 
 
-## 5. The need of session level hints to guide better prefix retention policies
+## 5. The need for session-level hints to guide better prefix retention policies
 
 Coding-agent sessions alternate between rapid LLM–tool interactions and long pauses while users review results or decide what to do next. A typical session lasts about **30 minutes**, but an individual user turn lasts only about **61 seconds**.
 
 These phases have very different timing characteristics. The median gap between tool steps is just **1.8 seconds**, compared to **96.5 seconds between user turns**. This also affects cache reuse: mean cache hit ratios remain near **97.5% after tool steps**, but drop to **84% after user pauses**. Longer pauses make it harder to keep previously cached contexts available.
 
-{{< diagram size="medium" caption="*Figure 7.* Requests return quickly during tool loops, while longer user pauses are associated with lower cache reuse." >}}
+{{< diagram size="medium" caption="*Figure 6.* Requests return quickly during tool loops, while longer user pauses are associated with lower cache reuse." >}}
 <div class="fig-legend">
   <span><i class="fig-key fig-key--green"></i>Tool gap</span>
   <span><i class="fig-key fig-key--amber"></i>Ask-user tool</span>
@@ -208,7 +208,7 @@ These phases have very different timing characteristics. The median gap between 
 
 One way to improve reuse is to retain cached KV state for longer. However, **longer retention comes at a significant storage cost**. Retaining cached state for roughly a day captures nearly all potential temporal reuse, but requires **25.6× more mean storage than 15-minute retention**. Much of this extra storage holds prefixes that will never be reused, such as those from completed sessions or discarded contexts.
 
-{{< diagram size="medium" caption="*Figure 6.* Longer retention reduces fresh prefill and user cost, but provider storage costs eventually dominate. Costs are normalized to a one-minute retention time." >}}
+{{< diagram size="medium" caption="*Figure 7.* Longer retention reduces fresh prefill and user cost, but provider storage costs eventually dominate. Costs are normalized to a one-minute retention time." >}}
 <div class="fig-plots">
   <figure class="fig-plot">
     <div class="fig-plot-title">User API cost</div>
