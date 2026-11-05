@@ -119,7 +119,30 @@ def rollout_worker_process():
 
 We evaluated WeightBridge with models from **16B to 1.03T parameters on 2–64 H100 nodes**. Each node has eight GPUs. The primary metric is **average GPU stall time (AGST) per weight transfer.** Across the four deployments, WeightBridge lowers AGST by **16.6–29.4× over Miles Broadcast** and **5.4–42.0× over Miles P2P**. Layout and replica-count studies show that global planning avoids the single-source bottleneck while keeping transfer time close to the bandwidth-based lower bound.
 
-{{< figure src="ev-real_workload_agst_1col.svg" size="medium" alt="AGST speedup over Miles Broadcast for 16B, 30B, 235B, and 1.03T models" caption="**Real-workload performance.** Bars show AGST speedup over Miles Broadcast; “Ours” denotes WeightBridge." >}}
+{{< diagram size="medium" caption="**Real-workload performance.** Speedup in average GPU stall time (AGST) per weight transfer over Miles Broadcast; higher is better." >}}
+<div class="fig-legend">
+  <span><i class="fig-key fig-key--box fig-key--slate"></i>Miles Broadcast</span>
+  <span><i class="fig-key fig-key--box fig-key--amber"></i>Miles P2P</span>
+  <span><i class="fig-key fig-key--box fig-key--green"></i>WeightBridge</span>
+</div>
+<div class="fig-plots fig-plots--1">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">AGST speedup by model size</div>
+    {{< plotly height="300" alt="Grouped bars of the speedup in average GPU stall time over Miles Broadcast for 16B, 30B, 235B and 1.026T models. WeightBridge reaches 25.1×, 26.1×, 29.4× and 16.6×; Miles P2P 0.6×, 1.2×, 3.2× and 3.1×; Miles Broadcast is 1× by definition." >}}
+    {
+      "decimals": 1,
+      "xname": "Model size",
+      "data": [
+        {"type": "bar", "name": "Miles Broadcast", "color": "slate", "x": ["16B", "30B", "235B", "1.026T"], "y": [1.0, 1.0, 1.0, 1.0], "hovertemplate": "%{fullData.name}: %{y:.1f}×<extra></extra>"},
+        {"type": "bar", "name": "Miles P2P", "color": "amber", "x": ["16B", "30B", "235B", "1.026T"], "y": [0.6, 1.2, 3.2, 3.1], "hovertemplate": "%{fullData.name}: %{y:.1f}×<extra></extra>"},
+        {"type": "bar", "name": "WeightBridge", "color": "green", "x": ["16B", "30B", "235B", "1.026T"], "y": [25.1, 26.1, 29.4, 16.6], "hovertemplate": "%{fullData.name}: %{y:.1f}×<extra></extra>", "texttemplate": "%{y:.1f}×", "textposition": "outside", "constraintext": "none", "cliponaxis": false, "textfont": {"size": 11, "color": "#4b5563"}}
+      ],
+      "layout": {"xaxis": {"title": {"text": "Model size"}}, "yaxis": {"title": {"text": "Speedup over Miles Broadcast"}, "range": [0, 33], "tickvals": [0, 10, 20, 30], "ticksuffix": "×"}}
+    }
+    {{< /plotly >}}
+  </figure>
+</div>
+{{< /diagram >}}
 
 ### Fast Integration into Different Backends
 

@@ -1,65 +1,84 @@
 {{- /*
-  An interactive chart drawn in the browser by plotly.js.
+  An interactive chart drawn in the browser by plotly.js. See docs/figures.md.
 
   {{< plotly height="280" alt="What the chart shows, for screen readers" >}}
   {
     "unit": "MQPS",
+    "decimals": 2,
     "xname": "Workload",
     "data": [
-      { "type": "bar", "name": "Segcache", "color": "#e8502c",
+      { "type": "bar", "name": "Segcache", "color": "red",
         "x": ["content", "user1"], "y": [4.0, 5.53] }
     ],
     "layout": { "yaxis": { "title": { "text": "Throughput (MQPS)" } } }
   }
   {{< /plotly >}}
 
-  The inner JSON is a plotly.js spec ("data", "layout", optional "config") plus
-  four keys handled by assets/js/plotly-figures.js, which applies the site's
-  chart style:
-    color     on a trace: the series colour (marker, line and hover swatch)
-    unit      appended to values in hover labels and named in the data table
+  The inner JSON is a plotly.js spec ("data", "layout", optional "config").
+  assets/js/plotly-figures.js applies the site's chart style and handles:
+    color     on a trace: a palette name (blue, red, green, amber, purple,
+              magenta, teal, gold, yellow, gray, slate, muted) or any CSS colour
+    table     on a trace: false leaves it out of the data table
+    unit      appended to values in hover labels, named in the data table
+    decimals  digits after the decimal point for values, in hover and the table
     xname     heading of the data table's first column
-    decimals  digits after the decimal point for y values, in hover labels and
-              the data table (default: as written)
-  A trace with a "text" array shows that text in hover and in the table
-  instead of y (e.g. "off scale").
+    table     on the spec: false for no data table, true to force one
+  A trace with a "text" array shows that text instead of its value in hover
+  labels and the table (e.g. "> 1.3" for a bar cut off by the axis).
 
-  Below the chart, a collapsed table lists the values. It is built here, at
-  build time, so the numbers stay available without JavaScript and to screen
-  readers. layouts/_default/single.html loads plotly.js on pages that contain
-  a chart. Use it inside {{< diagram >}} for the caption and size, and inside
-  <div class="fig-plots"><figure class="fig-plot"> for side-by-side panels.
+  Bar and line charts with up to 40 categories get a collapsed data table,
+  built here at build time, so the numbers work without JavaScript and for
+  screen readers. Without JavaScript the chart shows its alt text instead.
+  layouts/_default/single.html loads plotly.js on pages that contain a chart.
 */ -}}
 {{- $spec := .Inner | strings.TrimSpace | transform.Unmarshal -}}
 {{- $height := .Get "height" | default "280" -}}
+{{- $alt := .Get "alt" | default "" -}}
 <div class="fig-chart" style="height: {{ $height }}px" data-plotly="{{ $spec | jsonify | string }}"
-  {{- with .Get "alt" }} role="img" aria-label="{{ . }}"{{ end }}>
-  <p class="fig-chart-fallback">This chart needs JavaScript. Its values are in the data table below.</p>
+  {{- with $alt }} role="img" aria-label="{{ . }}"{{ end }}>
+  <p class="fig-chart-fallback">{{ $alt | default "This chart needs JavaScript." }}</p>
 </div>
-{{- $xs := slice -}}
+
+{{- /* Data table: rows are categories (x, or y for horizontal bars), columns are traces. */ -}}
+{{- $rows := slice -}}
+{{- $cols := slice -}}
+{{- $tabular := ne (string $spec.table) "false" -}}
 {{- range $spec.data -}}
-  {{- range .x -}}
-    {{- if not (in $xs .) -}}{{- $xs = $xs | append . -}}{{- end -}}
+  {{- $t := . -}}
+  {{- $type := string ((index $t "type") | default "scatter") -}}
+  {{- if ne (string (index $t "table")) "false" -}}
+    {{- if not (and (in (slice "bar" "scatter") $type) (isset $t "x") (isset $t "y")) -}}
+      {{- $tabular = false -}}
+    {{- else -}}
+      {{- $horizontal := eq (string (index $t "orientation")) "h" -}}
+      {{- $cats := cond $horizontal (index $t "y") (index $t "x") -}}
+      {{- $vals := cond $horizontal (index $t "x") (index $t "y") -}}
+      {{- range $cats -}}
+        {{- if not (in $rows .) -}}{{- $rows = $rows | append . -}}{{- end -}}
+      {{- end -}}
+      {{- $cols = $cols | append (dict "t" $t "cats" $cats "vals" $vals) -}}
+    {{- end -}}
   {{- end -}}
-{{- end }}
+{{- end -}}
+{{- if and $tabular $cols (or (eq (string $spec.table) "true") (le (len $rows) 40)) }}
 <details class="fig-data">
   <summary>Data{{ with $spec.unit }} ({{ . }}){{ end }}</summary>
   <div class="fig-data-scroll">
     <table>
       <thead><tr><th scope="col">{{ with $spec.xname }}{{ . }}{{ end }}</th>
-        {{- range $spec.data }}<th scope="col">{{ .name }}</th>{{ end -}}
+        {{- range $cols }}<th scope="col">{{ .t.name }}</th>{{ end -}}
       </tr></thead>
       <tbody>
-      {{- range $x := $xs }}
-        <tr><th scope="row">{{ $x }}</th>
-        {{- range $t := $spec.data -}}
+      {{- range $row := $rows }}
+        <tr><th scope="row">{{ $row }}</th>
+        {{- range $c := $cols -}}
           {{- $cell := "" -}}
-          {{- range $i, $v := $t.x -}}
-            {{- if eq $v $x -}}
-              {{- if isset $t "text" -}}
-                {{- $cell = index $t.text $i -}}
+          {{- range $i, $v := $c.cats -}}
+            {{- if eq $v $row -}}
+              {{- if isset $c.t "text" -}}
+                {{- $cell = index $c.t.text $i -}}
               {{- else -}}
-                {{- $cell = index $t.y $i -}}
+                {{- $cell = index $c.vals $i -}}
                 {{- with $spec.decimals -}}{{- $cell = lang.FormatNumber (int .) $cell -}}{{- end -}}
               {{- end -}}
             {{- end -}}
@@ -72,4 +91,5 @@
     </table>
   </div>
 </details>
+{{- end -}}
 {{- /* trailing newline intentionally omitted */ -}}

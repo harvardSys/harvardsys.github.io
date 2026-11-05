@@ -29,11 +29,12 @@
   {{- end }}
   <section>{{- .Content -}}</section>
 
-  {{- /* Charts from the plotly shortcode: plotly.js (basic bundle: bar, scatter,
-         pie) and the site's renderer, only on pages that contain a chart. */ -}}
+  {{- /* Charts from the plotly shortcode: plotly.js (cartesian bundle: bar,
+         scatter, box, heatmap, histogram, ...) and the site's renderer, only on
+         pages that contain a chart. */ -}}
   {{- if strings.Contains .Content "data-plotly=" }}
-  <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@3.7.0/plotly-basic.min.js"
-    integrity="sha384-XPf/yZU+7YHOOK1zu0qFyjETky28iDlzWu1QBMXPoONR5S4zywnrXdgSClQyPcYb" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@3.7.0/plotly-cartesian.min.js"
+    integrity="sha384-bZyw96TJNxAYROKQ6Js+sdba9eOCs2wvFMevzzEC0+g30MXHiX/nh7wfW8Kahmcf" crossorigin="anonymous"></script>
   {{- with resources.Get "js/plotly-figures.js" | minify | fingerprint }}
   <script defer src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}"></script>
   {{- end }}

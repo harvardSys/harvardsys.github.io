@@ -22,55 +22,87 @@ All render as a `<figure>` with a caption. Styles live in
 
 Plots you have the data for are drawn in the browser by
 [plotly.js](https://plotly.com/javascript/). Text in a chart is real page text
-at a fixed 12px, so a chart reads the same on a phone and a laptop; hovering
-(or tapping) shows exact values; and a collapsed **Data** table under each chart
-lists the numbers. The table is built when the site is built, so it also works
-without JavaScript and for screen readers.
+at a fixed 12px, so a chart reads the same on a phone and a laptop. Hovering (or
+tapping) shows exact values, and bar and line charts with up to 40 categories
+get a collapsed **Data** table, built when the site is built, so the numbers
+also work without JavaScript and for screen readers.
 
-Write the data as a plotly.js spec in JSON inside `{{< plotly >}}`. Wrap it in
-`{{< diagram >}}` for the caption and size, with an HTML legend and title:
+A chart figure is a `{{< diagram >}}` holding an HTML legend and one or more
+panels. Each panel (`.fig-plot`) is a card with a title, an optional subtitle
+and a `{{< plotly >}}` chart, whose JSON is a plotly.js spec:
 
 ```markdown
-{{< diagram size="medium" caption="*Figure 1.* Caption." >}}
+{{< diagram size="large" caption="*Figure 1.* Caption." >}}
 <div class="fig-legend">
-  <span><i class="fig-key fig-key--box" style="--c: #2a78d6"></i>Memcached</span>
-  <span><i class="fig-key fig-key--box" style="--c: #e8502c"></i>Segcache</span>
+  <span><i class="fig-key fig-key--box fig-key--blue"></i>Memcached</span>
+  <span><i class="fig-key fig-key--box fig-key--red"></i>Segcache</span>
 </div>
-<div class="fig-plots fig-plots--1">
+<div class="fig-plots">
   <figure class="fig-plot">
-    <div class="fig-plot-title">Single-thread throughput</div>
+    <div class="fig-plot-title">Single thread</div>
+    <div class="fig-plot-sub">Higher is better</div>
     {{< plotly height="280" alt="What the chart shows, for screen readers" >}}
     {
       "unit": "MQPS",
       "decimals": 2,
       "xname": "Workload",
       "data": [
-        {"type": "bar", "name": "Memcached", "color": "#2a78d6", "x": ["content", "user1"], "y": [2.73, 3.86]},
-        {"type": "bar", "name": "Segcache", "color": "#e8502c", "x": ["content", "user1"], "y": [4.0, 5.53]}
+        {"type": "bar", "name": "Memcached", "color": "blue", "x": ["content", "user1"], "y": [2.73, 3.86]},
+        {"type": "bar", "name": "Segcache", "color": "red", "x": ["content", "user1"], "y": [4.0, 5.53]}
       ],
       "layout": {"yaxis": {"title": {"text": "Throughput (MQPS)"}}}
     }
     {{< /plotly >}}
   </figure>
+  <figure class="fig-plot"> ...a second panel... </figure>
 </div>
 {{< /diagram >}}
 ```
 
-- `data`, `layout` and `config` are plain plotly.js. The site style (fonts,
-  axis and grid colours, hover labels, no zoom or toolbar) is applied by
-  `assets/js/plotly-figures.js`, so set only what the chart needs: axis titles,
-  ranges, ticks, shapes, annotations.
-- Extra keys: `color` on a trace (its series colour), and `unit`, `decimals`
-  and `xname` on the spec (hover suffix, number format, and the table's first
-  column heading). A trace with a `text` array shows that text instead of `y`
-  in hover labels and the table, e.g. `"> 1.3"` for a bar cut off at the top of
-  the axis.
-- For charts side by side, put several `<figure class="fig-plot">` in one
-  `fig-plots`; they stack on phones. Because chart text does not scale, give
-  charts room: `size="medium"` for one chart, `size="large"` for two.
-- `layouts/_default/single.html` loads plotly.js (basic bundle: bar, scatter
-  and pie; a pinned version from jsdelivr with an integrity hash) only on pages
-  that contain a chart. Other chart types need a different bundle.
+**Style is applied for you** by `assets/js/plotly-figures.js`: the page font,
+soft horizontal grid lines, a baseline under the plot, no tick marks, rounded
+bar ends, 2.25px lines, unified hover labels, a dotted crosshair on line
+charts, and no zoom or toolbar (so phones can still scroll past a chart). Set
+only what the chart needs: data, axis titles, ranges, tick values and formats,
+reference lines (`shapes`) and direct labels (`annotations`).
+
+- **Colours:** give each trace `"color"` as a palette name (`blue`, `red`,
+  `green`, `amber`, `purple`, `magenta`, `teal`, `gold`, `yellow`, `gray`,
+  `slate`, `muted`) or any CSS colour, and use the matching legend key class
+  (`fig-key--blue`, ...). Keep one colour per series across all panels of a figure.
+- **Legend:** an HTML `.fig-legend` above the panels (or inside a panel, under
+  its title). Each entry's text must equal the trace `name` (or `legendgroup`)
+  it stands for: entries then become toggles. Hovering an entry highlights that
+  series in every chart of the figure, and clicking it hides or shows the series.
+  Keys: `fig-key` (line), `fig-key fig-key--dash` (dashed line), `fig-key fig-key--box` (bar, area).
+- **Axis titles:** a y-axis title is drawn horizontally above the plot, not
+  rotated. Put "lower/higher is better" and similar notes in `.fig-plot-sub`.
+- **Ticks:** prefer evenly spaced ticks (`dtick`, plus `tickformat`,
+  `ticksuffix` such as `"×"`). With explicit `tickvals`, the renderer writes
+  the labels itself (plotly.js would drop the suffix); set `ticktext` for
+  anything else, e.g. `["1s", "1m", "15m", "1d"]`.
+- **Few points, markers:** lines with up to 12 points get markers; longer lines
+  (CDFs, time series) are plain lines. Override with `"mode"`.
+- **Direct labels:** label line ends or reference lines with `annotations`
+  rather than relying on colour alone; keep annotation text ink or gray.
+- **Bands** (a percentile range): two traces, the lower edge with
+  `"line": {"width": 0}` and `"showlegend": false`, and the upper edge with
+  `"fill": "tonexty"`; give both the same `legendgroup` and `"table": false`.
+- **Stacked areas:** traces with the same `"stackgroup"`.
+- **Box plots:** `"type": "box"` with precomputed `q1`, `median`, `q3`,
+  `lowerfence`, `upperfence` arrays (one value per box).
+- **Heat maps:** `"type": "heatmap"` with `x`, `y`, `z` and a `colorscale`.
+- **Sizes:** chart text does not scale with the chart, so give charts room:
+  `size="medium"` for one panel, `size="large"` for two side by side,
+  `size="wide"` for three or more (`fig-plots--3`). Panels stack on phones.
+- **Site keys in the JSON:** `color` and `table` on a trace; `unit` (hover
+  suffix), `decimals` (number format in hover and table), `xname` (the table's
+  first column heading) and `table` (`false` for none, `true` to force one) on
+  the spec. A trace with a `text` array shows that text instead of its value
+  in hover labels and the table (e.g. `"> 1.3"` for a bar cut off by the axis).
+- `layouts/_default/single.html` loads plotly.js (cartesian bundle: bar,
+  scatter, box, heatmap, histogram and more; a pinned version from jsdelivr
+  with an integrity hash) only on pages that contain a chart.
 
 Example: `content/blog/segcache/index.md` (Figures 5 and 6).
 
