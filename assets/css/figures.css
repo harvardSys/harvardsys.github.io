@@ -305,7 +305,7 @@
 /* Side by side, per-panel legends get two lines of room, so the plots line up. */
 @container (min-width: 36.01rem) {
   .fig-plots:not(.fig-plots--1) .fig-plot .fig-legend {
-    min-height: 3.2em;
+    min-height: 3.6em;          /* two rows of entries */
     align-content: flex-start;
   }
 }
