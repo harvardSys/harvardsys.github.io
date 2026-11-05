@@ -121,7 +121,8 @@
     var c = colour(t.color);
     var type = t.type || 'scatter';
     var base = {};
-    if (type === 'bar' || type === 'scatter') {
+    var silent = t.hoverinfo === 'skip' || t.hoverinfo === 'none';
+    if ((type === 'bar' || type === 'scatter') && !silent) {
       var value = t.text ? '%{text}' : (t.orientation === 'h' ? '%{x}' : '%{y}') + (spec.unit ? ' ' + spec.unit : '');
       base.hovertemplate = '%{fullData.name}: ' + value + '<extra></extra>';
     }
@@ -190,27 +191,26 @@
   }
 
   function styleLayout(spec, data) {
-    var layout = merge(LAYOUT, spec.layout || {});
     var lines = data.some(function (t) { return (t.type || 'scatter') === 'scatter'; });
     var bars = data.some(function (t) { return t.type === 'bar'; });
     var horizontal = data.some(function (t) { return t.orientation === 'h'; });
 
-    // Line charts get a vertical crosshair while hovering.
+    // Defaults by chart type; the spec's own layout always has the last word.
+    var base = merge(LAYOUT, {});
     if (lines && !bars) {
-      layout.xaxis = merge({
+      // Line charts get a vertical crosshair while hovering.
+      base.xaxis = merge(base.xaxis, {
         showspikes: true, spikemode: 'across', spikesnap: 'cursor',
         spikecolor: SPIKE, spikethickness: 1, spikedash: 'dot'
-      }, layout.xaxis);
+      });
     }
-    // Horizontal bars: grid runs along x, categories read top to bottom.
     if (horizontal) {
-      layout.hovermode = (spec.layout && spec.layout.hovermode) || 'y unified';
-      layout.xaxis = merge(layout.xaxis, { showgrid: true, showline: false });
-      layout.yaxis = merge(layout.yaxis, { showgrid: false, showline: true, autorange: 'reversed' });
-      if (spec.layout && spec.layout.yaxis && spec.layout.yaxis.autorange !== undefined) {
-        layout.yaxis.autorange = spec.layout.yaxis.autorange;
-      }
+      // Horizontal bars and boxes: grid along x, categories read top to bottom.
+      base.hovermode = 'y unified';
+      base.xaxis = merge(base.xaxis, { showgrid: true, showline: false });
+      base.yaxis = merge(base.yaxis, { showgrid: false, showline: true, autorange: 'reversed' });
     }
+    var layout = merge(base, spec.layout || {});
     if (spec.decimals != null) {
       var valueAxis = horizontal ? 'xaxis' : 'yaxis';
       var va = layout[valueAxis];
@@ -239,6 +239,19 @@
     return t.legendgroup || t.name;
   }
 
+  function filled(t) {
+    return !!t.stackgroup || (t.fill && t.fill !== 'none');
+  }
+
+  // The same colour with its alpha scaled by k.
+  function fade(c, k) {
+    var m = /rgba?\(([^)]*)\)/.exec(c || '');
+    if (!m) return tint(c, k);
+    var p = m[1].split(',');
+    var a = p.length > 3 ? parseFloat(p[3]) : 1;
+    return 'rgba(' + p[0] + ',' + p[1] + ',' + p[2] + ',' + (a * k).toFixed(3) + ')';
+  }
+
   // HTML legends drive the charts in their figure: hovering a series
   // highlights it, and clicking (or Enter/Space) hides or shows it.
   function wireLegends() {
@@ -246,6 +259,9 @@
       var plots = Array.prototype.slice.call(fig.querySelectorAll('[data-plotly]'))
         .filter(function (el) { return el.data; });
       if (!plots.length) return;
+      plots.forEach(function (el) {
+        el._siteFill = el._fullData.map(function (t) { return t.fillcolor; });
+      });
       Array.prototype.forEach.call(fig.querySelectorAll('.fig-legend > span'), function (item) {
         var name = item.getAttribute('data-series') || item.textContent.trim();
         var targets = [];
@@ -269,12 +285,23 @@
             Plotly.restyle(t.el, { visible: off ? 'legendonly' : true }, t.idx);
           });
         }
+        // Dims the other series. plotly.js ignores trace opacity on filled
+        // areas, so stacked areas and bands fade through their fill colour.
         function highlight(on) {
           plots.forEach(function (el) {
-            var opacity = el.data.map(function (t) {
-              return !on || seriesName(t) === name ? 1 : 0.22;
+            var lineIdx = [], lineOpacity = [], fillIdx = [], fillColour = [];
+            el.data.forEach(function (t, i) {
+              var keep = !on || seriesName(t) === name;
+              if (filled(t)) {
+                fillIdx.push(i);
+                fillColour.push(keep ? el._siteFill[i] : fade(el._siteFill[i], 0.22));
+              } else {
+                lineIdx.push(i);
+                lineOpacity.push(keep ? 1 : 0.22);
+              }
             });
-            Plotly.restyle(el, { opacity: opacity });
+            if (lineIdx.length) Plotly.restyle(el, { opacity: lineOpacity }, lineIdx);
+            if (fillIdx.length) Plotly.restyle(el, { fillcolor: fillColour }, fillIdx);
           });
         }
         item.addEventListener('click', toggle);

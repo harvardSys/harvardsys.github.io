@@ -79,7 +79,7 @@
                 {{- $cell = index $c.t.text $i -}}
               {{- else -}}
                 {{- $cell = index $c.vals $i -}}
-                {{- with $spec.decimals -}}{{- $cell = lang.FormatNumber (int .) $cell -}}{{- end -}}
+                {{- if isset $spec "decimals" -}}{{- $cell = lang.FormatNumber (int $spec.decimals) $cell -}}{{- end -}}
               {{- end -}}
             {{- end -}}
           {{- end -}}

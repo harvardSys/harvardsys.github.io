@@ -84,9 +84,13 @@ reference lines (`shapes`) and direct labels (`annotations`).
 - **Few points, markers:** lines with up to 12 points get markers; longer lines
   (CDFs, time series) are plain lines. Override with `"mode"`.
 - **Direct labels:** label line ends or reference lines with `annotations`
-  rather than relying on colour alone; keep annotation text ink or gray.
+  rather than relying on colour alone; keep annotation text ink or gray. On a
+  log axis, annotations take log10 values (`"x": 3` for 1,000) while `shapes`
+  take data values.
+- **Reference lines:** `shapes` with `"layer": "between"` sit above the grid
+  and below the data (`"below"` hides them under the grid lines).
 - **Bands** (a percentile range): two traces, the lower edge with
-  `"line": {"width": 0}` and `"showlegend": false`, and the upper edge with
+  `"line": {"width": 0}` and `"hoverinfo": "skip"`, and the upper edge with
   `"fill": "tonexty"`; give both the same `legendgroup` and `"table": false`.
 - **Stacked areas:** traces with the same `"stackgroup"`.
 - **Box plots:** `"type": "box"` with precomputed `q1`, `median`, `q3`,
@@ -169,9 +173,8 @@ Tips:
   very wide, split it into two crops of equal width so its text stays readable.
 - Leave out a figure-wide title (matplotlib `suptitle`); the caption covers it.
 
-Examples: `content/blog/a-year-in-llm-serving/index.md` (PNG, with a shared
-legend) and `content/blog/burstiness-is-all-you-need/index.md` (matplotlib SVG,
-2×3 grid).
+No post uses `panels` at the moment: plots with data are charts (see above).
+It remains the tool for a multi-panel figure you only have as a picture.
 
 ## Code figures
 
