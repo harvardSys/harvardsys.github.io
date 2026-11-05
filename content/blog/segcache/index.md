@@ -2,7 +2,7 @@
 title = 'Pelikan Segcache: a memory-efficient and scalable in-memory key-value cache for small objects'
 date = 2021-10-01T20:00:00-04:00
 author = 'Juncheng Yang'
-draft = true
+draft = false
 tags = ['caching', 'systems', 'performance', 'memory-management']
 showToc = true
 +++
@@ -11,7 +11,7 @@ In collaboration with Carnegie Mellon University, Twitter is building Pelikan's 
 
 <!--more-->
 
-In-memory key-value caches such as Memcached and Pelikan are widely deployed in modern web applications to provide low-latency, high-throughput services. In [previous posts](https://twitter.github.io/pelikan/blog/), we have described [caching at Twitter](https://twitter.github.io/pelikan/2020/benchmark-adq.html), [the design of Pelikan](https://twitter.github.io/pelikan/2019/why-pelikan.html), etc. This blog post will describe a new storage backend for Pelikan, called Segcache, developed in collaboration between [Carnegie Mellon University](http://www.cs.cmu.edu/~rvinayak/#group) and Twitter. The new design enables high memory efficiency, high throughput, and scalability for workloads that are mostly small objects and use TTL (time-to-live).[^1] As a spoiler, in our benchmark, Segcache can reduce the memory footprint of Twitter's largest cache cluster by up to 60% compared to the slab backend. 
+In-memory key-value caches such as Memcached and Pelikan are widely deployed in modern web applications to provide low-latency, high-throughput services. In [previous posts](https://pelikan.io/blog/), we have described [caching at Twitter](https://pelikan.io/blog/benchmark-adq/), [the design of Pelikan](https://pelikan.io/blog/why-pelikan/), etc. This blog post will describe a new storage backend for Pelikan, called Segcache, developed in collaboration between [Carnegie Mellon University](http://www.cs.cmu.edu/~rvinayak/#group) and Twitter. The new design enables high memory efficiency, high throughput, and scalability for workloads that are mostly small objects and use TTL (time-to-live).[^1] As a spoiler, in our benchmark, Segcache can reduce the memory footprint of Twitter's largest cache cluster by up to 60% compared to the slab backend. 
 
 [^1]: Workloads with large objects or do not use TTL can also benefit from Segcache, but the benefit is relatively smaller. 
 
