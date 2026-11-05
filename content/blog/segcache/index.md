@@ -438,7 +438,7 @@ This is one of the most important metrics for caches. Instead of showing miss ra
         {"type": "bar", "name": "Hyperbolic + sampling", "color": "#6250d6", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [0.65, 0.684, 0.94, 0.7, 0.35], "text": ["0.65", "0.684", "0.94", "0.7", "0.35"]},
         {"type": "bar", "name": "Segcache", "color": "#e8502c", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [0.375, 0.579, 0.583, 0.45, 0.125], "text": ["0.375", "0.579", "0.583", "0.45", "0.125"]}
       ],
-      "layout": {"xaxis": {"tickmode": "array", "tickvals": ["content", "user1", "user2", "negative", "multi-tenant"], "ticktext": ["content", "user1", "user2", "negative", "multi-<br>tenant"], "tickangle": 0}, "yaxis": {"title": {"text": "Cache size (relative)"}, "range": [0, 1.3], "tickvals": [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]}, "shapes": [{"type": "line", "xref": "paper", "x0": 0, "x1": 1, "y0": 1, "y1": 1, "line": {"color": "#4b5563", "width": 1.5, "dash": "dash"}}]}
+      "layout": {"xaxis": {"tickmode": "array", "tickvals": ["content", "user1", "user2", "negative", "multi-tenant"], "ticktext": ["content", "user1", "user2", "negative", "multi-<br>tenant"], "tickangle": 0}, "yaxis": {"title": {"text": "Cache size relative to Pelikan slab"}, "range": [0, 1.3], "tickvals": [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2], "tickformat": ".1f"}, "shapes": [{"type": "line", "xref": "paper", "x0": 0, "x1": 1, "y0": 1, "y1": 1, "line": {"color": "#4b5563", "width": 1.5, "dash": "dash"}}], "annotations": [{"xref": "paper", "x": 0, "y": 1, "xanchor": "left", "yanchor": "bottom", "text": "Pelikan slab", "showarrow": false, "font": {"size": 11, "color": "#4b5563"}, "xshift": 2}]}
     }
     {{< /plotly >}}
   </figure>
@@ -492,7 +492,7 @@ Besides memory efficiency, throughput and thread scalability are also critical. 
         {"type": "scatter", "name": "Memcached", "color": "#2a78d6", "x": [1, 2, 4, 8, 12, 16, 20, 24], "y": [3.0, 3.8, 5.6, 7.7, 8.9, 9.3, 9.3, 9.3]},
         {"type": "scatter", "name": "Segcache", "color": "#e8502c", "x": [1, 2, 4, 8, 12, 16, 20, 24], "y": [3.6, 6.9, 12.7, 24.2, 35.8, 47.1, 57.0, 70.7]}
       ],
-      "layout": {"xaxis": {"title": {"text": "Threads"}, "range": [0, 25], "tickvals": [1, 4, 8, 12, 16, 20, 24], "showgrid": true, "unifiedhovertitle": {"text": "%{x} threads"}}, "yaxis": {"title": {"text": "Throughput (MQPS)"}, "range": [0, 80], "dtick": 20}, "annotations": [{"x": 24, "y": 70.7, "text": "Segcache", "showarrow": false, "xanchor": "right", "yanchor": "middle", "xshift": -9, "font": {"size": 12, "color": "#1f2328"}}, {"x": 24, "y": 9.3, "text": "Memcached", "showarrow": false, "xanchor": "right", "yanchor": "bottom", "yshift": 6, "font": {"size": 12, "color": "#1f2328"}}]}
+      "layout": {"xaxis": {"title": {"text": "Threads"}, "range": [0, 25], "tickvals": [1, 4, 8, 12, 16, 20, 24], "showgrid": false, "unifiedhovertitle": {"text": "%{x} threads"}}, "yaxis": {"title": {"text": "Throughput (MQPS)"}, "range": [0, 80], "dtick": 20}, "annotations": [{"x": 24, "y": 70.7, "text": "Segcache", "showarrow": false, "xanchor": "right", "yanchor": "middle", "xshift": -9, "font": {"size": 12, "color": "#1f2328"}}, {"x": 24, "y": 9.3, "text": "Memcached", "showarrow": false, "xanchor": "right", "yanchor": "bottom", "yshift": 6, "font": {"size": 12, "color": "#1f2328"}}]}
     }
     {{< /plotly >}}
   </figure>

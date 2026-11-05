@@ -1,12 +1,11 @@
 /*
  * Draws the charts written with the {{< plotly >}} shortcode
- * (layouts/shortcodes/plotly.html). Each chart is an element with a
- * data-plotly attribute holding a plotly.js spec; the site's chart style is
- * applied here, so a post only carries its data and a few per-chart choices.
+ * (layouts/shortcodes/plotly.html) and applies the site's chart style, so a
+ * post only carries its data and a few per-chart choices. See docs/figures.md.
  *
  * Loaded with `defer` after plotly.js by layouts/_default/single.html, only on
  * pages that contain a chart. If plotly.js does not load, each chart keeps its
- * fallback text and the data table below it.
+ * text description and data table.
  */
 (function () {
   'use strict';
@@ -15,12 +14,32 @@
   if (!charts.length || !window.Plotly) return;
 
   // Same tokens as assets/css/figures.css.
-  var FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
   var INK = '#1f2328';
-  var INK_2 = '#4b5563';
-  var LINE = '#d1d5db';
-  var GRID = '#e5e7eb';
-  var AXIS = '#9ca3af';
+  var MUTED = '#6b7280';
+  var BORDER = '#e5e7eb';
+  var GRID = '#eef0f3';
+  var BASELINE = '#c4c9d1';
+  var SPIKE = '#9ca3af';
+
+  // Series colours by name (a trace's "color" may also be any CSS colour).
+  // Categorical order checked for colour-vision deficiency on adjacent pairs.
+  var PALETTE = {
+    blue: '#2a78d6',
+    red: '#e8502c',
+    green: '#1baf7a',
+    amber: '#eda100',
+    purple: '#6250d6',
+    magenta: '#d55181',
+    teal: '#2d7a6c',
+    gold: '#b8862f',
+    yellow: '#e7bd38',
+    gray: '#6b7280',
+    slate: '#4b5563',
+    muted: '#c3c8d0'
+  };
+
+  var FONT = window.getComputedStyle(document.body).fontFamily ||
+    "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
   function isObject(v) {
     return v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -37,65 +56,247 @@
     return out;
   }
 
-  function axis(grid) {
+  function colour(c) {
+    return PALETTE[c] || c;
+  }
+
+  // rgba() for a hex colour, for fills and bands.
+  function tint(c, alpha) {
+    var hex = colour(c);
+    var m = /^#([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return hex;
+    var n = parseInt(m[1], 16);
+    return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
+  }
+
+  function axis(isY) {
     return {
       automargin: true,
       fixedrange: true,           // no zoom or pan: page scrolling stays free on phones
-      showgrid: grid,
+      showgrid: isY,
       gridcolor: GRID,
+      gridwidth: 1,
       zeroline: false,
-      showline: true,
-      linecolor: AXIS,
-      ticks: 'outside',
-      ticklen: 3,
-      tickcolor: AXIS,
-      tickfont: { size: 12, color: INK_2 },
-      title: { font: { size: 13, color: INK }, standoff: 10 }
+      showline: !isY,             // a baseline under the plot, no line up the side
+      linecolor: BASELINE,
+      linewidth: 1,
+      ticks: '',
+      showspikes: false,          // line charts turn the crosshair back on
+      tickfont: { size: 12, color: MUTED },
+      title: { font: { size: 12, color: MUTED }, standoff: 10 },
+      layer: 'below traces'
     };
   }
 
   var LAYOUT = {
-    font: { family: FONT, size: 12, color: INK_2 },
+    font: { family: FONT, size: 12, color: MUTED },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    margin: { l: 10, r: 10, t: 10, b: 10 },   // automargin grows these to fit labels
+    margin: { l: 4, r: 8, t: 30, b: 4 },     // automargin grows these to fit labels
     showlegend: false,                       // legends are HTML (.fig-legend)
     dragmode: false,
     hovermode: 'x unified',
-    hoverlabel: { bgcolor: '#ffffff', bordercolor: LINE, font: { family: FONT, size: 12, color: INK } },
-    bargap: 0.2,
-    bargroupgap: 0,
+    hoverdistance: 40,
+    hoverlabel: {
+      bgcolor: '#ffffff',
+      bordercolor: BORDER,
+      align: 'left',
+      namelength: -1,
+      font: { family: FONT, size: 12, color: INK }
+    },
+    bargap: 0.3,
+    bargroupgap: 0.12,
+    barcornerradius: 3,
     xaxis: axis(false),
     yaxis: axis(true)
   };
 
   var CONFIG = { responsive: true, displayModeBar: false, scrollZoom: false, doubleClick: false };
 
-  function styleTrace(t, unit) {
-    var value = t.text ? '%{text}' : '%{y}' + (unit ? ' ' + unit : '');
-    var base = { hovertemplate: '%{fullData.name}: ' + value + '<extra></extra>' };
-    if (t.type === 'bar') {
-      // A 1px surface edge keeps a 2px gap between adjacent bars.
-      base.marker = { color: t.color, line: { color: '#ffffff', width: 1 } };
+  function count(t) {
+    return (t.y || t.x || []).length;
+  }
+
+  function styleTrace(t, spec) {
+    var c = colour(t.color);
+    var type = t.type || 'scatter';
+    var base = {};
+    if (type === 'bar' || type === 'scatter') {
+      var value = t.text ? '%{text}' : (t.orientation === 'h' ? '%{x}' : '%{y}') + (spec.unit ? ' ' + spec.unit : '');
+      base.hovertemplate = '%{fullData.name}: ' + value + '<extra></extra>';
+    }
+    if (type === 'bar') {
+      base.marker = { color: c, line: { width: 0 } };
       base.textposition = 'none';            // text is for hover and the table
-    } else {
-      base.mode = 'lines+markers';
-      base.line = { color: t.color, width: 2 };
-      base.marker = { color: t.color, size: 7, line: { color: '#ffffff', width: 1 } };
+    } else if (type === 'scatter') {
+      var few = count(t) <= 12;
+      base.mode = few ? 'lines+markers' : 'lines';
+      base.line = { color: c, width: 2.25, shape: 'linear' };
+      base.marker = { color: c, size: 7, line: { color: '#ffffff', width: 1.5 } };
+      if (t.stackgroup) {
+        // Stacked areas: solid fills split by a thin surface-coloured line.
+        base.mode = 'lines';
+        base.fillcolor = tint(c, 0.9);
+        base.line = { color: '#ffffff', width: 0.75 };
+      } else if (t.fill && t.fill !== 'none') {
+        // A band (e.g. a percentile range) drawn to the previous trace.
+        base.mode = 'lines';
+        base.fillcolor = tint(c, 0.16);
+        base.line = { color: 'rgba(0,0,0,0)', width: 0 };
+        base.hoverinfo = 'skip';
+        delete base.hovertemplate;
+      }
+    } else if (type === 'box') {
+      base.line = { color: c, width: 1.5 };
+      base.fillcolor = tint(c, 0.22);
+      base.whiskerwidth = 0.5;
+      base.boxpoints = false;
+      base.hoverinfo = 'y';
     }
     var own = merge({}, t);
-    delete own.color;
+    delete own.color;               // site keys, not plotly.js attributes
+    delete own.table;
     return merge(base, own);
   }
 
+  // Number for a tick label: fixed decimals for ".Nf" formats, otherwise short
+  // (1.5, 30, 2K, 10M on log axes or from 10,000 up).
+  function tickLabel(v, ax) {
+    var m = /^,?\.(\d+)f$/.exec(ax.tickformat || '');
+    var text;
+    if (m) {
+      text = Number(v).toFixed(+m[1]);
+    } else {
+      var a = Math.abs(v);
+      var short = function (x) { return String(Number(Number(x).toPrecision(6))); };
+      text = short(v);
+      if (ax.type === 'log' ? a >= 1e3 : a >= 1e4) {
+        var units = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+        for (var i = 0; i < units.length; i++) {
+          if (a >= units[i][0]) { text = short(v / units[i][0]) + units[i][1]; break; }
+        }
+      }
+    }
+    return (ax.tickprefix || '') + text + (ax.ticksuffix || '');
+  }
+
+  // With explicit tick values, plotly.js drops tick prefixes/suffixes and
+  // prints the labels with the hover format: write the labels out instead.
+  function labelTicks(ax) {
+    var vals = ax.tickvals;
+    if (!Array.isArray(vals) || ax.ticktext || !(ax.ticksuffix || ax.tickprefix || ax.hoverformat)) return ax;
+    if (!vals.every(function (v) { return typeof v === 'number'; })) return ax;
+    return merge(ax, { ticktext: vals.map(function (v) { return tickLabel(v, ax); }) });
+  }
+
+  function styleLayout(spec, data) {
+    var layout = merge(LAYOUT, spec.layout || {});
+    var lines = data.some(function (t) { return (t.type || 'scatter') === 'scatter'; });
+    var bars = data.some(function (t) { return t.type === 'bar'; });
+    var horizontal = data.some(function (t) { return t.orientation === 'h'; });
+
+    // Line charts get a vertical crosshair while hovering.
+    if (lines && !bars) {
+      layout.xaxis = merge({
+        showspikes: true, spikemode: 'across', spikesnap: 'cursor',
+        spikecolor: SPIKE, spikethickness: 1, spikedash: 'dot'
+      }, layout.xaxis);
+    }
+    // Horizontal bars: grid runs along x, categories read top to bottom.
+    if (horizontal) {
+      layout.hovermode = (spec.layout && spec.layout.hovermode) || 'y unified';
+      layout.xaxis = merge(layout.xaxis, { showgrid: true, showline: false });
+      layout.yaxis = merge(layout.yaxis, { showgrid: false, showline: true, autorange: 'reversed' });
+      if (spec.layout && spec.layout.yaxis && spec.layout.yaxis.autorange !== undefined) {
+        layout.yaxis.autorange = spec.layout.yaxis.autorange;
+      }
+    }
+    if (spec.decimals != null) {
+      var valueAxis = horizontal ? 'xaxis' : 'yaxis';
+      var va = layout[valueAxis];
+      if (!va.hoverformat) layout[valueAxis] = merge(va, { hoverformat: ',.' + spec.decimals + 'f' });
+    }
+    ['xaxis', 'yaxis'].forEach(function (k) { layout[k] = labelTicks(layout[k]); });
+
+    // The y-axis title reads horizontally above the plot instead of rotated.
+    var yTitle = !horizontal && layout.yaxis.title && layout.yaxis.title.text;
+    if (yTitle) {
+      layout.yaxis = merge(layout.yaxis, { title: { text: '' } });
+      layout.title = {
+        text: yTitle,
+        x: 0, xref: 'container', xanchor: 'left',
+        y: 1, yref: 'container', yanchor: 'top',
+        pad: { l: 2, t: 2 },
+        font: { size: 12, color: MUTED }
+      };
+    } else if (!layout.title) {
+      layout.margin = merge(layout.margin, { t: 10 });
+    }
+    return layout;
+  }
+
+  function seriesName(t) {
+    return t.legendgroup || t.name;
+  }
+
+  // HTML legends drive the charts in their figure: hovering a series
+  // highlights it, and clicking (or Enter/Space) hides or shows it.
+  function wireLegends() {
+    Array.prototype.forEach.call(document.querySelectorAll('.fig'), function (fig) {
+      var plots = Array.prototype.slice.call(fig.querySelectorAll('[data-plotly]'))
+        .filter(function (el) { return el.data; });
+      if (!plots.length) return;
+      Array.prototype.forEach.call(fig.querySelectorAll('.fig-legend > span'), function (item) {
+        var name = item.getAttribute('data-series') || item.textContent.trim();
+        var targets = [];
+        plots.forEach(function (el) {
+          var idx = [];
+          el.data.forEach(function (t, i) { if (seriesName(t) === name) idx.push(i); });
+          if (idx.length) targets.push({ el: el, idx: idx });
+        });
+        if (!targets.length) return;
+
+        item.classList.add('fig-legend-toggle');
+        item.setAttribute('role', 'button');
+        item.setAttribute('tabindex', '0');
+        item.setAttribute('aria-pressed', 'true');
+        item.title = 'Show or hide ' + name;
+
+        function toggle() {
+          var off = item.classList.toggle('is-off');
+          item.setAttribute('aria-pressed', String(!off));
+          targets.forEach(function (t) {
+            Plotly.restyle(t.el, { visible: off ? 'legendonly' : true }, t.idx);
+          });
+        }
+        function highlight(on) {
+          plots.forEach(function (el) {
+            var opacity = el.data.map(function (t) {
+              return !on || seriesName(t) === name ? 1 : 0.22;
+            });
+            Plotly.restyle(el, { opacity: opacity });
+          });
+        }
+        item.addEventListener('click', toggle);
+        item.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+        });
+        item.addEventListener('mouseenter', function () { highlight(true); });
+        item.addEventListener('mouseleave', function () { highlight(false); });
+        item.addEventListener('focus', function () { highlight(true); });
+        item.addEventListener('blur', function () { highlight(false); });
+      });
+    });
+  }
+
+  var pending = [];
   Array.prototype.forEach.call(charts, function (el) {
     var spec = JSON.parse(el.getAttribute('data-plotly'));
-    var data = (spec.data || []).map(function (t) { return styleTrace(t, spec.unit); });
-    var layout = merge(LAYOUT, spec.layout || {});
-    if (spec.decimals != null && !layout.yaxis.hoverformat) {
-      layout.yaxis = merge(layout.yaxis, { hoverformat: '.' + spec.decimals + 'f' });
-    }
+    var data = (spec.data || []).map(function (t) { return styleTrace(t, spec); });
+    var layout = styleLayout(spec, data);
     el.textContent = '';
-    Plotly.newPlot(el, data, layout, merge(CONFIG, spec.config || {}));
+    el.classList.add('is-drawn');
+    pending.push(Plotly.newPlot(el, data, layout, merge(CONFIG, spec.config || {})));
   });
+  Promise.all(pending).then(wireLegends);
 })();
