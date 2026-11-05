@@ -24,6 +24,8 @@
   --fig-red: #e8502c;
   --fig-gold: #b8862f;
   --fig-teal: #2d7a6c;
+  --fig-amber: #d6a21e;   /* plot lines; --fig-yellow is for fills */
+  --fig-gray: #6b7280;    /* reference series, dashed */
 
   container-type: inline-size;
   margin-block: 2.25rem;
@@ -142,6 +144,123 @@
 @media (prefers-reduced-motion: reduce) {
   .fig-diagram * {
     animation: none !important;
+  }
+}
+
+/* ---------- Plots: one SVG per panel, laid out as a grid ------------------ */
+/* Panels drawn by figsrc/ (320x240 px each, real text) sit side by side and   */
+/* stack on narrow screens. Titles and the legend are HTML, shared by panels.  */
+/* Each panel is capped near its drawn size, so text inside stays ~12-13px.   */
+
+.fig-plots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem 1.5rem;
+  align-items: start;
+}
+
+.fig-plots--1 { grid-template-columns: minmax(0, 1fr); }
+.fig-plots--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fig-plots--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.fig-plot {
+  margin: 0;
+  min-width: 0;
+}
+
+.fig .fig-plot img {
+  width: 100%;
+  max-width: 22rem;
+  margin-inline: auto;
+}
+
+.fig-plot-title {
+  margin-bottom: 0.2rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* A 4-up grid folds to 2-up inside the text column, then everything stacks. */
+@container (max-width: 64rem) {
+  .fig-plots--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container (max-width: 36rem) {
+  .fig-plots,
+  .fig-plots--3,
+  .fig-plots--4 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Legend: one key per series; the key carries the colour, the text stays ink. */
+.fig-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem 1.1rem;
+  margin-bottom: 0.9rem;
+  color: var(--fig-ink-2);
+}
+
+.fig-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.fig-key {
+  --c: var(--fig-gray);
+  display: inline-block;
+  width: 1.1rem;
+  height: 0;
+  border-top: 2px solid var(--c);
+  border-radius: 1px;
+}
+
+.fig-key--dash {
+  height: 2px;
+  border: 0;
+  background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px);
+}
+
+.fig-key--box {
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 0;
+  border-radius: 2px;
+  background: var(--c);
+}
+
+.fig-key--blue   { --c: var(--fig-blue); }
+.fig-key--red    { --c: var(--fig-red); }
+.fig-key--green  { --c: var(--fig-green); }
+.fig-key--amber  { --c: var(--fig-amber); }
+.fig-key--yellow { --c: var(--fig-yellow); }
+.fig-key--purple { --c: var(--fig-purple); }
+.fig-key--gray   { --c: var(--fig-gray); }
+.fig-key--muted  { --c: #c3c8d0; }   /* series shown for context only */
+
+/* Groups of panels inside one figure (e.g. one row per model), each with a heading. */
+.fig-group + .fig-group { margin-top: 1.75rem; }
+
+.fig-group-title {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--fig-line);
+  font-weight: 600;
+}
+
+.fig-plot .fig-legend {
+  gap: 0.2rem 0.9rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.8125rem;
+}
+
+/* Side by side, per-panel legends get two lines of room, so the plots line up. */
+@container (min-width: 36.01rem) {
+  .fig-plots:not(.fig-plots--1) .fig-plot .fig-legend {
+    min-height: 2.75em;
+    align-content: flex-end;
   }
 }
 

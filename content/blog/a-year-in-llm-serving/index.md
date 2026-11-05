@@ -19,13 +19,48 @@ Not all models behave the same way. MiniMax-M2.5, heavily used for coding and ag
 
 These differences matter for serving systems. **Input-heavy workloads put more pressure on prefill, while output-heavy workloads spend more time decoding.** An optimization that works well for one model may be less effective for another.
 
-![Measured cumulative distributions of input tokens, output tokens, and output-to-input ratio for representative models.](paper-token-profiles.png)
-{caption="*Figure 1.* Different models have different input and output characteristics. MiniMax-M2.5 is more input-heavy, while DeepSeek-R1 generates longer outputs." panels="0,0,346,396; 346,0,331,396; 677,0,361,396"}
+{{< diagram size="wide" caption="*Figure 1.* Different models have different input and output characteristics. MiniMax-M2.5 is more input-heavy, while DeepSeek-R1 generates longer outputs." >}}
+<div class="fig-legend">
+  <span><i class="fig-key fig-key--gray fig-key--dash"></i>All models</span>
+  <span><i class="fig-key fig-key--blue"></i>DeepSeek-V3.2</span>
+  <span><i class="fig-key fig-key--red"></i>DeepSeek-R1</span>
+  <span><i class="fig-key fig-key--green"></i>MiniMax-M2.5</span>
+</div>
+<div class="fig-plots fig-plots--3">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Input length</div>
+    <img src="figs/token-profiles-input.svg" width="320" height="240" alt="CDF of input tokens per request. MiniMax-M2.5 sits furthest right, with a median near 19K tokens; DeepSeek-V3.2 and R1 have medians near 7K.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Output length</div>
+    <img src="figs/token-profiles-output.svg" width="320" height="240" alt="CDF of output tokens per request. DeepSeek-R1 sits furthest right, with a median near 1K tokens; DeepSeek-V3.2 and MiniMax-M2.5 have medians of about 310 and 140.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Output-to-input ratio</div>
+    <img src="figs/token-profiles-ratio.svg" width="320" height="240" alt="CDF of the output-to-input token ratio. MiniMax-M2.5 has the lowest ratios, with a median below 0.01; DeepSeek-R1 has the highest, with a median near 0.13.">
+  </figure>
+</div>
+{{< /diagram >}}
 
 But even the same workloads don't stay the same over time. Across the year, median input lengths remained relatively stable, while median output lengths dropped from a few hundred tokens to below 100. Model popularity also shifted substantially, with traffic spreading across more models.
 
-![Monthly input and output token distributions across the year.](paper-token-evolution.png)
-{caption="*Figure 2.* Input lengths remain broadly stable, while output lengths become shorter over the year. Lines indicate medians; shaded regions show percentile ranges." panels="0,0,515,513; 515,0,531,513"}
+{{< diagram size="medium" caption="*Figure 2.* Input lengths remain broadly stable, while output lengths become shorter over the year. Lines indicate medians; shaded regions show percentile ranges." >}}
+<div class="fig-legend">
+  <span><i class="fig-key fig-key--blue"></i>Median</span>
+  <span><i class="fig-key fig-key--blue fig-key--box" style="opacity: .37"></i>25th–75th percentile</span>
+  <span><i class="fig-key fig-key--blue fig-key--box" style="opacity: .12"></i>10th–90th percentile</span>
+</div>
+<div class="fig-plots">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Input tokens per request</div>
+    <img src="figs/token-evolution-input.svg" width="320" height="240" alt="Monthly input tokens per request from April 2025 to April 2026, log scale. The median stays between about 1,200 and 5,100 tokens all year.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Output tokens per request</div>
+    <img src="figs/token-evolution-output.svg" width="320" height="240" alt="Monthly output tokens per request from April 2025 to April 2026, log scale. The median falls from about 350 tokens to below 100 in the last two months.">
+  </figure>
+</div>
+{{< /diagram >}}
 
 **Implications:** Serving systems should adapt to both model-specific characteristics and changing workload patterns. Static optimizations tuned to today's popular models may become less effective as workloads evolve.
 
@@ -35,8 +70,18 @@ The dataset covers thousands of models, from popular public models to privately 
 
 Interestingly, many models also show positive correlations between consecutive inter-arrival times. In other words, busy periods tend to remain busy, while quiet periods tend to persist.
 
-![Model request rates, burstiness, and inter-arrival correlations.](paper-model-burstiness.png)
-{caption="*Figure 3.* Most models exhibit uneven request arrivals, and many show correlated busy and quiet periods." panels="0,0,512,520; 512,0,596,520"}
+{{< diagram size="medium" caption="*Figure 3.* Most models exhibit uneven request arrivals, and many show correlated busy and quiet periods." >}}
+<div class="fig-plots">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Popularity vs. burstiness</div>
+    <img src="figs/burstiness-density.svg" width="320" height="270" alt="Heat map of models by mean requests per active hour (10 to 100K) and the coefficient of variation of their inter-arrival times. Most models sit above a CV of 1, that is, burstier than random arrivals.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Do busy periods persist?</div>
+    <img src="figs/burstiness-autocorr.svg" width="320" height="270" alt="The same axes, one dot per model, coloured by the lag-1 Spearman autocorrelation of inter-arrival times from −1 (blue) to +1 (red). About 94% of models have a positive autocorrelation.">
+  </figure>
+</div>
+{{< /diagram >}}
 
 **Implications:** These patterns create opportunities for model colocation. Rather than dedicating GPUs to models that may sit idle much of the time, serving systems could colocate models with complementary demand patterns to improve utilization. Understanding model popularity and burstiness can help guide placement and resource allocation.
 
@@ -48,15 +93,42 @@ We found something interesting: **requests often reuse almost their entire input
 
 Reuse also differs substantially across models. MiniMax-M2.5 exhibits more reuse than the DeepSeek models in our analysis, consistent with coding and agentic workloads that repeatedly extend previous contexts.
 
-![Distributions of cached-token fractions across requests and models.](paper-prefix-reuse.png)
-{caption="*Figure 4.* Cache reuse is often close to either zero or complete reuse. The amount of reuse also differs across models and prompt lengths." panels="0,0,544,550; 544,0,535,550"}
+{{< diagram size="medium" caption="*Figure 4.* Cache reuse is often close to either zero or complete reuse. The amount of reuse also differs across models and prompt lengths." >}}
+<div class="fig-plots">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">By prompt length</div>
+    <div class="fig-legend">
+      <span><i class="fig-key fig-key--gray fig-key--dash"></i>All requests</span>
+      <span><i class="fig-key fig-key--amber"></i>&lt;1K input</span>
+      <span><i class="fig-key fig-key--purple"></i>&gt;8K input</span>
+    </div>
+    <img src="figs/prefix-reuse-length.svg" width="320" height="240" alt="CDF of the token hit ratio per request, for all requests and for prompts under 1K and over 8K input tokens. The curves rise steeply near 0 and near 1 and are flat in between: 70% of prompts over 8K reuse at most a tenth of their input.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">By model</div>
+    <div class="fig-legend">
+      <span><i class="fig-key fig-key--gray fig-key--dash"></i>All models</span>
+      <span><i class="fig-key fig-key--blue"></i>DeepSeek-V3.2</span>
+      <span><i class="fig-key fig-key--red"></i>DeepSeek-R1</span>
+      <span><i class="fig-key fig-key--green"></i>MiniMax-M2.5</span>
+    </div>
+    <img src="figs/prefix-reuse-model.svg" width="320" height="240" alt="CDF of the token hit ratio per request by model. About 82% of DeepSeek-V3.2 requests and 77% of DeepSeek-R1 requests reuse at most a tenth of their input, against 40% for MiniMax-M2.5, which has the most near-complete reuse.">
+  </figure>
+</div>
+{{< /diagram >}}
 
 Another important question is how long cached prefixes should stay in memory.
 
 Looking at consecutive requests from the same user to the same model, we found that **approximately 50% arrive within 0.1 seconds, 80% within 10 seconds, and 99% within 15 minutes.**
 
-![Distribution of time between consecutive requests from the same user to the same model.](paper-repeat-arrivals.png)
-{caption="*Figure 5.* Repeat requests arrive quickly: approximately 50% within 0.1 seconds, 80% within 10 seconds, and 99% within 15 minutes. These are repeat arrivals, not guaranteed cache hits." size="medium"}
+{{< diagram size="small" caption="*Figure 5.* Repeat requests arrive quickly: approximately 50% within 0.1 seconds, 80% within 10 seconds, and 99% within 15 minutes. These are repeat arrivals, not guaranteed cache hits." >}}
+<div class="fig-plots fig-plots--1">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Same user, same model</div>
+    <img src="figs/repeat-arrivals.svg" width="320" height="240" alt="CDF of the time between consecutive requests from the same user to the same model, from 1 millisecond to about 3 hours on a log scale. About 50% arrive within 0.1 seconds, 80% within 10 seconds and 99% within 15 minutes.">
+  </figure>
+</div>
+{{< /diagram >}}
 
 **Implications:** LLM workloads exhibit strong temporal locality. Short cache-retention windows can capture much of the potential reuse without keeping stale prefixes in memory for hours. Cache management should prioritize recently active prefixes rather than retaining everything indefinitely.
 
@@ -68,8 +140,24 @@ We simulated several eviction policies and found that **simple policies like FIF
 
 One possible explanation is the strong temporal locality we observed earlier. When most reuse happens shortly after a previous request, simple policies can already capture a large fraction of reusable prefixes.
 
-![Simulated cache hit ratios across eviction policies and cache sizes.](paper-cache-policies.png)
-{caption="*Figure 6.* FIFO and LRU are competitive with more sophisticated eviction policies across the evaluated workloads. The future-aware Belady oracle indicates the remaining room for improvement." panels="0,0,681,738; 681,0,698,738"}
+{{< diagram size="medium" caption="*Figure 6.* FIFO and LRU are competitive with more sophisticated eviction policies across the evaluated workloads. The future-aware Belady oracle indicates the remaining room for improvement." >}}
+<div class="fig-legend">
+  <span><i class="fig-key fig-key--blue"></i>FIFO</span>
+  <span><i class="fig-key fig-key--red"></i>LRU</span>
+  <span><i class="fig-key fig-key--gray fig-key--dash"></i>Belady (oracle)</span>
+  <span><i class="fig-key fig-key--muted"></i>ARC, GDSF, LRB, SIEVE</span>
+</div>
+<div class="fig-plots">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">MiniMax-M2.5</div>
+    <img src="figs/cache-policies-minimax.svg" width="320" height="240" alt="Token hit ratio against cache size from about 60K to 3M tokens for MiniMax-M2.5. FIFO and LRU track the other policies closely and reach about 0.92 at 630K tokens; ARC lags at mid sizes; the Belady oracle reaches 0.92 already at 315K.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">DeepSeek-V3.2</div>
+    <img src="figs/cache-policies-deepseek.svg" width="320" height="240" alt="Token hit ratio against cache size from about 200K to 200M tokens for DeepSeek-V3.2. LRU and LRB end highest of the practical policies at 0.72 and FIFO reaches 0.71; the Belady oracle stays well above them at small and medium sizes, reaching 0.75.">
+  </figure>
+</div>
+{{< /diagram >}}
 
 **Implications:** FIFO and LRU are strong baselines for KV-cache eviction. However, a gap remains between these policies and the future-aware Belady oracle. Closing this gap may require richer workload information, such as user access patterns and session context, beyond simple recency or frequency.
 
@@ -259,8 +347,56 @@ We evaluated these approaches using fleet-level simulations of production worklo
 
 Another interesting finding is that **increasing cache capacity alone does not guarantee better reuse**. If requests keep arriving at servers that don't hold their prefixes, extra cache space may do little to help.
 
-![Fleet simulations comparing routing strategies across cache sizes and fleet configurations.](paper-routing-results.png)
-{caption="*Figure 8.* Cache-aware routing achieves higher cache hit ratios and reduces session spread, with a modest increase in load imbalance." size="wide" panels="555,31,525,31; 1110,31,525,31; 0,95,535,980; 535,95,552,980; 1087,95,523,980; 1610,95,536,980"}
+{{< diagram size="wide" caption="*Figure 8.* Cache-aware routing achieves higher cache hit ratios and reduces session spread, with a modest increase in load imbalance." >}}
+<div class="fig-legend">
+  <span><i class="fig-key fig-key--gray"></i>Round-robin</span>
+  <span><i class="fig-key fig-key--blue"></i>Least-load</span>
+  <span><i class="fig-key fig-key--red"></i>Cache-aware</span>
+  <span><i class="fig-key fig-key--green"></i>Sticky</span>
+</div>
+<div class="fig-group">
+<div class="fig-group-title">DeepSeek-V3.2</div>
+<div class="fig-plots fig-plots--4">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Hit ratio vs. cache size</div>
+    <img src="figs/routing-deepseek-a.svg" width="280" height="220" alt="DeepSeek-V3.2, 20 instances: token hit ratio against cache per instance from 1K to 5M tokens. Cache-aware and sticky routing rise to about 0.5; least-load and round-robin stay below 0.07.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Replication vs. cache size</div>
+    <img src="figs/routing-deepseek-b.svg" width="280" height="220" alt="DeepSeek-V3.2, 20 instances: replication ratio against cache per instance. Round-robin and least-load stay near 1.9; cache-aware falls from 1.8 to 1.1 as caches grow; sticky stays at 1.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Replication vs. fleet size</div>
+    <img src="figs/routing-deepseek-c.svg" width="280" height="220" alt="DeepSeek-V3.2: replication ratio against 5 to 20 instances. Round-robin and least-load rise from 1.6 to 1.9, cache-aware from 1.6 to 1.8; sticky stays at 1.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Imbalance vs. fleet size</div>
+    <img src="figs/routing-deepseek-d.svg" width="280" height="220" alt="DeepSeek-V3.2: load imbalance against 5 to 20 instances. Cache-aware rises to 2.4%, round-robin to 1.4% and least-load to 1.1%; sticky is not shown.">
+  </figure>
+</div>
+</div>
+<div class="fig-group">
+<div class="fig-group-title">MiniMax-M2.5</div>
+<div class="fig-plots fig-plots--4">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Hit ratio vs. cache size</div>
+    <img src="figs/routing-minimax-a.svg" width="280" height="220" alt="MiniMax-M2.5, 20 instances: token hit ratio against cache per instance from 1K to 5M tokens. Cache-aware is near 0.58 even with small caches and reaches 0.64; sticky climbs from 0.11 to 0.64; least-load and round-robin stay at or below 0.1.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Replication vs. cache size</div>
+    <img src="figs/routing-minimax-b.svg" width="280" height="220" alt="MiniMax-M2.5, 20 instances: replication ratio against cache per instance. Round-robin is near 2.6 and least-load near 2.5; cache-aware stays near 1.0 to 1.1; sticky stays at 1.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Replication vs. fleet size</div>
+    <img src="figs/routing-minimax-c.svg" width="280" height="220" alt="MiniMax-M2.5: replication ratio against 5 to 20 instances. Round-robin and least-load rise from about 2 to 2.5 or more; cache-aware falls from 1.4 to 1.1; sticky stays at 1.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Imbalance vs. fleet size</div>
+    <img src="figs/routing-minimax-d.svg" width="280" height="220" alt="MiniMax-M2.5: load imbalance against 5 to 20 instances. Cache-aware rises to 4.3%, least-load to 2.4% and round-robin to 1.8%; sticky is not shown.">
+  </figure>
+</div>
+</div>
+{{< /diagram >}}
 
 **Implications:** Cache management and request routing should be optimized together. Increasing cache capacity or improving eviction alone may not be enough; serving systems must also route requests toward reusable prefixes while keeping the fleet reasonably balanced.
 
