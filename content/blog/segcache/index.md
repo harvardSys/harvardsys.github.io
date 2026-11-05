@@ -416,7 +416,7 @@ We evaluated Segcache using production traces from Twitter, and we compare Segca
 ### Memory efficiency 
 This is one of the most important metrics for caches. Instead of showing miss ratio curves (miss ratio vs cache size), we show the relative cache size to achieve the production miss ratios. This is more intuitive as it shows that if we want to achieve a production miss ratio, how much DRAM do we need for each system. 
 
-{{< diagram size="small" caption="*Figure 5.* Cache size each system needs to reach the production miss ratio, relative to Pelikan slab storage (dashed line; lower is better). Segcache needs 42–88% less memory than Pelikan slab. Bars with a break mark run past the top of the scale." >}}
+{{< diagram size="medium" caption="*Figure 5.* Cache size each system needs to reach the production miss ratio, relative to Pelikan slab storage (dashed line; lower is better). Segcache needs 42–88% less memory than Pelikan slab. Hatched bars run past the top of the scale." >}}
 <div class="fig-legend">
   <span><i class="fig-key fig-key--dash" style="--c: #4b5563"></i>Pelikan slab (= 1)</span>
   <span><i class="fig-key fig-key--box" style="--c: #2a78d6"></i>Memcached</span>
@@ -428,7 +428,19 @@ This is one of the most important metrics for caches. Instead of showing miss ra
 <div class="fig-plots fig-plots--1">
   <figure class="fig-plot">
     <div class="fig-plot-title">Cache size to reach the production miss ratio</div>
-    <img src="figs/eval-memory-efficiency.svg" width="320" height="240" alt="Grouped bars of relative cache size for five Twitter workloads: content, user1, user2, negative and multi-tenant. Segcache needs 0.38, 0.58, 0.58, 0.45 and 0.13 of Pelikan slab's cache size, the lowest on every workload. LHD with sampling runs past the scale on user1, user2 and negative, as does Memcached on user2.">
+    {{< plotly height="280" alt="Grouped bars of relative cache size for five Twitter workloads: content, user1, user2, negative and multi-tenant. Segcache needs 0.38, 0.58, 0.58, 0.45 and 0.13 of Pelikan slab's cache size, the lowest on every workload. LHD with sampling runs past the scale on user1, user2 and negative, as does Memcached on user2." >}}
+    {
+      "xname": "Workload",
+      "data": [
+        {"type": "bar", "name": "Memcached", "color": "#2a78d6", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [0.975, 1.053, 1.3, 0.9, 0.3], "text": ["0.975", "1.053", "> 1.3", "0.9", "0.3"], "marker": {"pattern": {"shape": ["", "", "/", "", ""], "fillmode": "overlay", "fgcolor": "#ffffff", "size": 6, "solidity": 0.35}}},
+        {"type": "bar", "name": "Memcached + scanning", "color": "#1baf7a", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [0.675, 0.895, 1.011, 0.9, 0.3], "text": ["0.675", "0.895", "1.011", "0.9", "0.3"]},
+        {"type": "bar", "name": "LHD + sampling", "color": "#eda100", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [0.825, 1.3, 1.3, 1.3, 1.2], "text": ["0.825", "> 1.3", "> 1.3", "> 1.3", "1.2"], "marker": {"pattern": {"shape": ["", "/", "/", "/", ""], "fillmode": "overlay", "fgcolor": "#ffffff", "size": 6, "solidity": 0.35}}},
+        {"type": "bar", "name": "Hyperbolic + sampling", "color": "#6250d6", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [0.65, 0.684, 0.94, 0.7, 0.35], "text": ["0.65", "0.684", "0.94", "0.7", "0.35"]},
+        {"type": "bar", "name": "Segcache", "color": "#e8502c", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [0.375, 0.579, 0.583, 0.45, 0.125], "text": ["0.375", "0.579", "0.583", "0.45", "0.125"]}
+      ],
+      "layout": {"xaxis": {"tickmode": "array", "tickvals": ["content", "user1", "user2", "negative", "multi-tenant"], "ticktext": ["content", "user1", "user2", "negative", "multi-<br>tenant"], "tickangle": 0}, "yaxis": {"title": {"text": "Cache size (relative)"}, "range": [0, 1.3], "tickvals": [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]}, "shapes": [{"type": "line", "xref": "paper", "x0": 0, "x1": 1, "y0": 1, "y1": 1, "line": {"color": "#4b5563", "width": 1.5, "dash": "dash"}}]}
+    }
+    {{< /plotly >}}
   </figure>
 </div>
 {{< /diagram >}}
@@ -439,7 +451,7 @@ We observe that compared to Pelikan slab storage (the dashed line), Segcache red
 ### Throughput and scalability
 Besides memory efficiency, throughput and thread scalability are also critical. Figure 6 shows that Segcache achieves single-thread throughput similar to Pelikan slab storage, both of which are significantly higher than Memcached and the research systems. 
 
-{{< diagram size="medium" caption="*Figure 6.* Throughput of the storage stack, with networking removed (higher is better). On one thread, Segcache is on par with Pelikan slab and faster than Memcached and the research systems on every workload. With more threads, Segcache scales almost linearly, reaching about 8× Memcached's throughput at 24 threads. Memcached + scanning is shown up to 8 threads." >}}
+{{< diagram size="large" caption="*Figure 6.* Throughput of the storage stack, with networking removed (higher is better). On one thread, Segcache is on par with Pelikan slab and faster than Memcached and the research systems on every workload. With more threads, Segcache scales almost linearly, reaching about 8× Memcached's throughput at 24 threads. Memcached + scanning is shown up to 8 threads." >}}
 <div class="fig-legend">
   <span><i class="fig-key fig-key--box" style="--c: #4b5563"></i>Pelikan slab</span>
   <span><i class="fig-key fig-key--box" style="--c: #2a78d6"></i>Memcached</span>
@@ -451,11 +463,38 @@ Besides memory efficiency, throughput and thread scalability are also critical. 
 <div class="fig-plots">
   <figure class="fig-plot">
     <div class="fig-plot-title">Single thread</div>
-    <img src="figs/eval-throughput.svg" width="320" height="240" alt="Grouped bars of single-thread throughput in million queries per second for five workloads. Segcache reaches 4.0, 5.5, 4.7, 4.2 and 3.8 MQPS, close to Pelikan slab's 4.0, 4.4, 5.4, 5.1 and 4.2, and above Memcached's 2.7 to 3.9 and every other system.">
+    {{< plotly height="280" alt="Grouped bars of single-thread throughput in million queries per second for five workloads. Segcache reaches 4.0, 5.5, 4.7, 4.2 and 3.8 MQPS, close to Pelikan slab's 4.0, 4.4, 5.4, 5.1 and 4.2, and above Memcached's 2.7 to 3.9 and every other system." >}}
+    {
+      "unit": "MQPS",
+      "decimals": 2,
+      "xname": "Workload",
+      "data": [
+        {"type": "bar", "name": "Pelikan slab", "color": "#4b5563", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [3.98, 4.43, 5.38, 5.14, 4.23]},
+        {"type": "bar", "name": "Memcached", "color": "#2a78d6", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [2.73, 3.86, 3.37, 3.23, 2.73]},
+        {"type": "bar", "name": "Memcached + scanning", "color": "#1baf7a", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [1.66, 3.65, 2.7, 2.14, 1.4]},
+        {"type": "bar", "name": "LHD + sampling", "color": "#eda100", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [2.24, 2.8, 2.66, 3.22, 2.43]},
+        {"type": "bar", "name": "Hyperbolic + sampling", "color": "#6250d6", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [2.08, 1.71, 1.78, 2.88, 2.21]},
+        {"type": "bar", "name": "Segcache", "color": "#e8502c", "x": ["content", "user1", "user2", "negative", "multi-tenant"], "y": [4.0, 5.53, 4.71, 4.21, 3.84]}
+      ],
+      "layout": {"xaxis": {"tickmode": "array", "tickvals": ["content", "user1", "user2", "negative", "multi-tenant"], "ticktext": ["content", "user1", "user2", "negative", "multi-<br>tenant"], "tickangle": 0}, "yaxis": {"title": {"text": "Throughput (MQPS)"}, "range": [0, 6], "dtick": 1}}
+    }
+    {{< /plotly >}}
   </figure>
   <figure class="fig-plot">
     <div class="fig-plot-title">Scaling with threads</div>
-    <img src="figs/eval-scalability.svg" width="320" height="240" alt="Throughput against 1 to 24 threads. Segcache grows almost linearly from about 4 to about 71 MQPS. Memcached levels off near 9 MQPS from 12 threads on. Memcached with scanning, shown up to 8 threads, tracks Memcached.">
+    {{< plotly height="280" alt="Throughput against 1 to 24 threads. Segcache grows almost linearly from about 4 to about 71 MQPS. Memcached levels off near 9 MQPS from 12 threads on. Memcached with scanning, shown up to 8 threads, tracks Memcached." >}}
+    {
+      "unit": "MQPS",
+      "decimals": 1,
+      "xname": "Threads",
+      "data": [
+        {"type": "scatter", "name": "Memcached + scanning", "color": "#1baf7a", "x": [1, 2, 4, 8], "y": [2.2, 2.6, 5.3, 7.6]},
+        {"type": "scatter", "name": "Memcached", "color": "#2a78d6", "x": [1, 2, 4, 8, 12, 16, 20, 24], "y": [3.0, 3.8, 5.6, 7.7, 8.9, 9.3, 9.3, 9.3]},
+        {"type": "scatter", "name": "Segcache", "color": "#e8502c", "x": [1, 2, 4, 8, 12, 16, 20, 24], "y": [3.6, 6.9, 12.7, 24.2, 35.8, 47.1, 57.0, 70.7]}
+      ],
+      "layout": {"xaxis": {"title": {"text": "Threads"}, "range": [0, 25], "tickvals": [1, 4, 8, 12, 16, 20, 24], "showgrid": true, "unifiedhovertitle": {"text": "%{x} threads"}}, "yaxis": {"title": {"text": "Throughput (MQPS)"}, "range": [0, 80], "dtick": 20}, "annotations": [{"x": 24, "y": 70.7, "text": "Segcache", "showarrow": false, "xanchor": "right", "yanchor": "middle", "xshift": -9, "font": {"size": 12, "color": "#1f2328"}}, {"x": 24, "y": 9.3, "text": "Memcached", "showarrow": false, "xanchor": "right", "yanchor": "bottom", "yshift": 6, "font": {"size": 12, "color": "#1f2328"}}]}
+    }
+    {{< /plotly >}}
   </figure>
 </div>
 {{< /diagram >}}

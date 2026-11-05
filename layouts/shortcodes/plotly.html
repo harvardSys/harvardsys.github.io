@@ -1,0 +1,75 @@
+{{- /*
+  An interactive chart drawn in the browser by plotly.js.
+
+  {{< plotly height="280" alt="What the chart shows, for screen readers" >}}
+  {
+    "unit": "MQPS",
+    "xname": "Workload",
+    "data": [
+      { "type": "bar", "name": "Segcache", "color": "#e8502c",
+        "x": ["content", "user1"], "y": [4.0, 5.53] }
+    ],
+    "layout": { "yaxis": { "title": { "text": "Throughput (MQPS)" } } }
+  }
+  {{< /plotly >}}
+
+  The inner JSON is a plotly.js spec ("data", "layout", optional "config") plus
+  four keys handled by assets/js/plotly-figures.js, which applies the site's
+  chart style:
+    color     on a trace: the series colour (marker, line and hover swatch)
+    unit      appended to values in hover labels and named in the data table
+    xname     heading of the data table's first column
+    decimals  digits after the decimal point for y values, in hover labels and
+              the data table (default: as written)
+  A trace with a "text" array shows that text in hover and in the table
+  instead of y (e.g. "off scale").
+
+  Below the chart, a collapsed table lists the values. It is built here, at
+  build time, so the numbers stay available without JavaScript and to screen
+  readers. layouts/_default/single.html loads plotly.js on pages that contain
+  a chart. Use it inside {{< diagram >}} for the caption and size, and inside
+  <div class="fig-plots"><figure class="fig-plot"> for side-by-side panels.
+*/ -}}
+{{- $spec := .Inner | strings.TrimSpace | transform.Unmarshal -}}
+{{- $height := .Get "height" | default "280" -}}
+<div class="fig-chart" style="height: {{ $height }}px" data-plotly="{{ $spec | jsonify | string }}"
+  {{- with .Get "alt" }} role="img" aria-label="{{ . }}"{{ end }}>
+  <p class="fig-chart-fallback">This chart needs JavaScript. Its values are in the data table below.</p>
+</div>
+{{- $xs := slice -}}
+{{- range $spec.data -}}
+  {{- range .x -}}
+    {{- if not (in $xs .) -}}{{- $xs = $xs | append . -}}{{- end -}}
+  {{- end -}}
+{{- end }}
+<details class="fig-data">
+  <summary>Data{{ with $spec.unit }} ({{ . }}){{ end }}</summary>
+  <div class="fig-data-scroll">
+    <table>
+      <thead><tr><th scope="col">{{ with $spec.xname }}{{ . }}{{ end }}</th>
+        {{- range $spec.data }}<th scope="col">{{ .name }}</th>{{ end -}}
+      </tr></thead>
+      <tbody>
+      {{- range $x := $xs }}
+        <tr><th scope="row">{{ $x }}</th>
+        {{- range $t := $spec.data -}}
+          {{- $cell := "" -}}
+          {{- range $i, $v := $t.x -}}
+            {{- if eq $v $x -}}
+              {{- if isset $t "text" -}}
+                {{- $cell = index $t.text $i -}}
+              {{- else -}}
+                {{- $cell = index $t.y $i -}}
+                {{- with $spec.decimals -}}{{- $cell = lang.FormatNumber (int .) $cell -}}{{- end -}}
+              {{- end -}}
+            {{- end -}}
+          {{- end -}}
+          <td>{{ $cell }}</td>
+        {{- end -}}
+        </tr>
+      {{- end }}
+      </tbody>
+    </table>
+  </div>
+</details>
+{{- /* trailing newline intentionally omitted */ -}}

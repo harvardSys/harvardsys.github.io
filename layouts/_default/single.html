@@ -29,6 +29,16 @@
   {{- end }}
   <section>{{- .Content -}}</section>
 
+  {{- /* Charts from the plotly shortcode: plotly.js (basic bundle: bar, scatter,
+         pie) and the site's renderer, only on pages that contain a chart. */ -}}
+  {{- if strings.Contains .Content "data-plotly=" }}
+  <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@3.7.0/plotly-basic.min.js"
+    integrity="sha384-XPf/yZU+7YHOOK1zu0qFyjETky28iDlzWu1QBMXPoONR5S4zywnrXdgSClQyPcYb" crossorigin="anonymous"></script>
+  {{- with resources.Get "js/plotly-figures.js" | minify | fingerprint }}
+  <script defer src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}"></script>
+  {{- end }}
+  {{- end }}
+
   <!-- Author section -->
   {{- if ne .Type "page" -}}
   {{- partial "post-author.html" . -}}

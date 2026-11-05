@@ -6,16 +6,73 @@ up 3–4× smaller on a phone than on a laptop. A dense paper figure becomes
 unreadable, and a small diagram blown up to 900px gets text bigger than the
 post's body text.
 
-The site gives you two ways to avoid that:
+The site gives you three ways to avoid that:
 
 | Your figure is…                                         | Use                                         |
 | ------------------------------------------------------- | ------------------------------------------- |
+| A plot or chart you have the numbers for                | **Chart** (`{{< plotly >}}`), drawn in the browser |
 | A diagram, schematic, or table you would draw yourself | **Code figure** (`{{< diagram >}}`)         |
-| A plot or chart (matplotlib, paper PNG, …)              | **Image figure** with `size` / `panels`     |
+| A plot you only have as a picture (paper PNG, …)        | **Image figure** with `size` / `panels`     |
 
-Both render as a `<figure>` with a caption. Styles live in
-`assets/css/figures.css`, and the markup comes from `layouts/partials/figure.html`
-and `layouts/shortcodes/diagram.html`.
+All render as a `<figure>` with a caption. Styles live in
+`assets/css/figures.css`, and the markup comes from `layouts/partials/figure.html`,
+`layouts/shortcodes/diagram.html` and `layouts/shortcodes/plotly.html`.
+
+## Charts
+
+Plots you have the data for are drawn in the browser by
+[plotly.js](https://plotly.com/javascript/). Text in a chart is real page text
+at a fixed 12px, so a chart reads the same on a phone and a laptop; hovering
+(or tapping) shows exact values; and a collapsed **Data** table under each chart
+lists the numbers. The table is built when the site is built, so it also works
+without JavaScript and for screen readers.
+
+Write the data as a plotly.js spec in JSON inside `{{< plotly >}}`. Wrap it in
+`{{< diagram >}}` for the caption and size, with an HTML legend and title:
+
+```markdown
+{{< diagram size="medium" caption="*Figure 1.* Caption." >}}
+<div class="fig-legend">
+  <span><i class="fig-key fig-key--box" style="--c: #2a78d6"></i>Memcached</span>
+  <span><i class="fig-key fig-key--box" style="--c: #e8502c"></i>Segcache</span>
+</div>
+<div class="fig-plots fig-plots--1">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Single-thread throughput</div>
+    {{< plotly height="280" alt="What the chart shows, for screen readers" >}}
+    {
+      "unit": "MQPS",
+      "decimals": 2,
+      "xname": "Workload",
+      "data": [
+        {"type": "bar", "name": "Memcached", "color": "#2a78d6", "x": ["content", "user1"], "y": [2.73, 3.86]},
+        {"type": "bar", "name": "Segcache", "color": "#e8502c", "x": ["content", "user1"], "y": [4.0, 5.53]}
+      ],
+      "layout": {"yaxis": {"title": {"text": "Throughput (MQPS)"}}}
+    }
+    {{< /plotly >}}
+  </figure>
+</div>
+{{< /diagram >}}
+```
+
+- `data`, `layout` and `config` are plain plotly.js. The site style (fonts,
+  axis and grid colours, hover labels, no zoom or toolbar) is applied by
+  `assets/js/plotly-figures.js`, so set only what the chart needs: axis titles,
+  ranges, ticks, shapes, annotations.
+- Extra keys: `color` on a trace (its series colour), and `unit`, `decimals`
+  and `xname` on the spec (hover suffix, number format, and the table's first
+  column heading). A trace with a `text` array shows that text instead of `y`
+  in hover labels and the table, e.g. `"> 1.3"` for a bar cut off at the top of
+  the axis.
+- For charts side by side, put several `<figure class="fig-plot">` in one
+  `fig-plots`; they stack on phones. Because chart text does not scale, give
+  charts room: `size="medium"` for one chart, `size="large"` for two.
+- `layouts/_default/single.html` loads plotly.js (basic bundle: bar, scatter
+  and pie; a pinned version from jsdelivr with an integrity hash) only on pages
+  that contain a chart. Other chart types need a different bundle.
+
+Example: `content/blog/segcache/index.md` (Figures 5 and 6).
 
 ## Image figures
 

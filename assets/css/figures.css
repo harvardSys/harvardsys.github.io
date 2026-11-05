@@ -264,6 +264,68 @@
   }
 }
 
+/* ---------- Charts drawn in the browser (plotly shortcode) ---------------- */
+/* layouts/shortcodes/plotly.html + assets/js/plotly-figures.js. Text in a     */
+/* chart is real page text at a fixed size, so a chart can be any width.       */
+
+.fig-chart {
+  width: 100%;
+}
+
+.fig-chart-fallback {
+  margin: 0;
+  padding: 3rem 1rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--fig-muted);
+}
+
+/* Collapsed table of the plotted values, built at build time. */
+.fig-data {
+  margin-top: 0.3rem;
+  font-size: 0.8125rem;
+  color: var(--fig-ink-2);
+}
+
+.fig-data > summary {
+  width: max-content;
+  margin-inline: auto;
+  cursor: pointer;
+}
+
+.fig-data-scroll {
+  margin-top: 0.4rem;
+  overflow-x: auto;
+}
+
+.fig-data table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.fig-data th,
+.fig-data td {
+  padding: 0.2rem 0.45rem;
+  border-bottom: 1px solid var(--fig-line);
+  text-align: right;
+}
+
+.fig-data th:first-child {
+  text-align: left;
+}
+
+.fig-data thead th {
+  vertical-align: bottom;
+  font-weight: 600;
+  color: var(--fig-ink);
+}
+
+.fig-data tbody th {
+  font-weight: 400;
+  white-space: nowrap;
+}
+
 /* Text for screen readers only (e.g. "yes" next to a ✓ in a table). */
 .fig .sr-only {
   position: absolute;
