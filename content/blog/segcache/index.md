@@ -89,8 +89,109 @@ Pelikan Segcache has high memory efficiency, high performance, with the followin
 [^3]: When we compare object metadata, we do not consider the memory usage of the hash table in any system. 
 [^4]: When we measure throughput, we remove the networking stack and focus only on the storage stack. In production using kernel TCP/IP, the networking stack is often the throughput bottleneck. When we switch to a new networking stack (such as DPDK), the storage stack's throughput becomes important. 
 
-![Segcache has three components: TTL buckets, each rooted at a chain of segments; an object store divided into segments; and a bulk-chaining hash table. Writes go through a TTL bucket to the last segment of its chain, and reads look up the hash table, which points into a segment.](segcache.svg)
-{caption="*Figure 2.* The design of Segcache. A write appends the object to the last segment in its TTL bucket's chain; a read looks up the hash table, which points to the object's location in a segment." size="full" panels="20,190,860,780; 885,60,750,910; 1640,60,830,910"}
+{{< diagram size="full" alt="Segcache's three components. TTL buckets: one per TTL range, each heading a chain of segments; a write goes to the bucket for its TTL and is appended to the last segment of the chain. The chains link segments in the object store, which is divided into segments 1 to M, each a small fixed-size log of objects with similar TTLs. The hash table: each bucket has one slot of shared bucket info and seven object slots, and a full bucket chains to another; a read looks up the hash table, which locates the object in a segment." caption="*Figure 2.* The design of Segcache. A write appends the object to the last segment in its TTL bucket's chain; a read looks up the hash table, which points to the object's location in a segment." >}}
+<style>
+  .d-sd { display: grid; grid-template-columns: minmax(0, 1fr) 4.75rem minmax(0, 1fr) 4.75rem minmax(0, 1fr); }
+  .d-sd-card { display: flex; flex-direction: column; padding: .8rem .85rem .85rem; border: 1px solid var(--fig-line); border-radius: 8px; background: var(--fig-surface); }
+  .d-sd-io { align-self: flex-start; display: inline-flex; align-items: center; gap: .3rem; margin-bottom: .55rem; padding: .05rem .55rem; border: 1px solid #9ca3af; border-radius: 999px; background: #fff; font-size: .8125rem; font-weight: 600; }
+  .d-sd-h { font-size: .9375rem; font-weight: 600; }
+  .d-sd-sub { margin-bottom: .65rem; color: var(--fig-ink-2); }
+  .d-sd-card > svg { display: block; width: 100%; height: auto; }
+  .d-sd-note { margin-top: auto; padding-top: .7rem; color: var(--fig-ink-2); }
+  .d-sd-link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; padding: 0 .4rem; text-align: center; font-size: .8125rem; line-height: 1.25; color: var(--fig-ink-2); }
+  .d-sd-link svg { width: 2.5rem; height: auto; }
+  .d-sd-link--back svg { transform: scaleX(-1); }
+  .d-sd-segs { display: grid; gap: .4rem; }
+  .d-sd-seg { display: flex; align-items: center; gap: .55rem; height: 1.9rem; overflow: hidden; border: 1.5px solid #e8502c; border-radius: 4px; background: #fff; }
+  .d-sd-seg::before { content: ""; align-self: stretch; width: .6rem; background: #e8502c; }
+  .d-sd-seg--more { justify-content: center; border: 1.5px dashed #c3c8d0; color: var(--fig-muted); }
+  .d-sd-seg--more::before { display: none; }
+  .d-sd-key { display: flex; flex-wrap: wrap; gap: .2rem .9rem; margin-top: .55rem; font-size: .8125rem; color: var(--fig-ink-2); }
+  .d-sd-key i { display: inline-block; width: .7rem; height: .7rem; margin-right: .35rem; border-radius: 2px; vertical-align: -.05rem; }
+  /* Narrower than 44rem: stack the cards; connectors turn vertical. */
+  @container (max-width: 44rem) {
+    .d-sd { grid-template-columns: minmax(0, 1fr); max-width: 24rem; margin-inline: auto; }
+    .d-sd-card > svg { max-width: 17rem; margin-inline: auto; }
+    .d-sd-link { flex-direction: row; gap: .6rem; padding: .7rem 0; }
+    .d-sd-link svg { width: 1.6rem; transform: rotate(90deg); }
+    .d-sd-link--back svg { transform: rotate(-90deg); }
+  }
+</style>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <marker id="d-sd-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 z" fill="#4b5563"/>
+    </marker>
+  </defs>
+</svg>
+<div class="d-sd">
+  <div class="d-sd-card">
+    <span class="d-sd-io">write ↓</span>
+    <div class="d-sd-h">TTL buckets</div>
+    <div class="d-sd-sub">One per TTL range</div>
+    <svg viewBox="0 0 220 132" aria-hidden="true">
+      <g fill="#d1f2e6" stroke="#1baf7a" stroke-width="1.5">
+        <rect x="6" y="6" width="30" height="20" rx="3"/><rect x="6" y="32" width="30" height="20" rx="3"/>
+        <rect x="6" y="58" width="30" height="20" rx="3"/><rect x="6" y="84" width="30" height="20" rx="3"/>
+        <rect x="6" y="110" width="30" height="20" rx="3"/>
+      </g>
+      <g fill="#fde0d6" stroke="#e8502c" stroke-width="1.5">
+        <rect x="62" y="32" width="32" height="20" rx="3"/><rect x="118" y="32" width="32" height="20" rx="3"/>
+        <rect x="174" y="32" width="32" height="20" rx="3"/><rect x="62" y="84" width="32" height="20" rx="3"/>
+      </g>
+      <g fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#d-sd-ah)">
+        <path d="M37 42 H59"/><path d="M95 42 H115"/><path d="M151 42 H171"/><path d="M37 94 H59"/>
+      </g>
+      <path d="M31 53 C 58 80, 160 80, 188 55" fill="none" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#d-sd-ah)"/>
+      <g font-size="12" text-anchor="middle" fill="#1f2328">
+        <text x="78" y="46.5">S1</text><text x="134" y="46.5">S3</text><text x="190" y="46.5">S4</text><text x="78" y="98.5">S2</text>
+      </g>
+      <text x="134" y="22" font-size="11.5" text-anchor="middle" fill="#4b5563">segment chain</text>
+    </svg>
+    <div class="d-sd-note">Each bucket heads a chain of segments. Writes append to the last segment (dashed pointer).</div>
+  </div>
+  <div class="d-sd-link"><svg viewBox="0 0 40 12" aria-hidden="true"><path d="M2 6 H32" stroke="#4b5563" stroke-width="1.6"/><path d="M31 1.5 L39 6 L31 10.5 z" fill="#4b5563"/></svg>link segments in</div>
+  <div class="d-sd-card">
+    <div class="d-sd-h">Object store</div>
+    <div class="d-sd-sub">The heap, split into segments</div>
+    <div class="d-sd-segs">
+      <div class="d-sd-seg">segment 1</div>
+      <div class="d-sd-seg">segment 2</div>
+      <div class="d-sd-seg d-sd-seg--more">…</div>
+      <div class="d-sd-seg">segment M</div>
+    </div>
+    <div class="d-sd-note">A segment is a small fixed-size log of objects with similar TTLs, behind a shared header.</div>
+  </div>
+  <div class="d-sd-link d-sd-link--back"><svg viewBox="0 0 40 12" aria-hidden="true"><path d="M2 6 H32" stroke="#4b5563" stroke-width="1.6"/><path d="M31 1.5 L39 6 L31 10.5 z" fill="#4b5563"/></svg>locate objects in</div>
+  <div class="d-sd-card">
+    <span class="d-sd-io">read ↓</span>
+    <div class="d-sd-h">Hash table</div>
+    <div class="d-sd-sub">Bulk-chained buckets</div>
+    <svg viewBox="0 0 220 98" aria-hidden="true">
+      <defs>
+        <g id="d-sd-bucket">
+          <rect x="0" width="10.5" height="10.5" rx="1.5" fill="#e8502c"/>
+          <g fill="#f5c542">
+            <rect x="12" width="10.5" height="10.5" rx="1.5"/><rect x="24" width="10.5" height="10.5" rx="1.5"/>
+            <rect x="36" width="10.5" height="10.5" rx="1.5"/><rect x="48" width="10.5" height="10.5" rx="1.5"/>
+            <rect x="60" width="10.5" height="10.5" rx="1.5"/><rect x="72" width="10.5" height="10.5" rx="1.5"/>
+            <rect x="84" width="10.5" height="10.5" rx="1.5"/>
+          </g>
+        </g>
+      </defs>
+      <use href="#d-sd-bucket" x="4" y="2"/><use href="#d-sd-bucket" x="4" y="18"/><use href="#d-sd-bucket" x="4" y="34"/>
+      <use href="#d-sd-bucket" x="4" y="50"/><use href="#d-sd-bucket" x="4" y="66"/><use href="#d-sd-bucket" x="4" y="82"/>
+      <use href="#d-sd-bucket" x="122" y="2"/><use href="#d-sd-bucket" x="122" y="50"/>
+      <g fill="#f5c542"><rect x="122" y="2" width="10.5" height="10.5" rx="1.5"/><rect x="122" y="50" width="10.5" height="10.5" rx="1.5"/></g>
+      <g fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#d-sd-ah)">
+        <path d="M101 7.25 H119"/><path d="M101 55.25 H119"/>
+      </g>
+    </svg>
+    <div class="d-sd-key"><span><i style="background: #e8502c"></i>bucket info (shared)</span><span><i style="background: #f5c542"></i>object info</span></div>
+    <div class="d-sd-note">Eight slots per bucket, one cache line: one slot of shared bucket info and seven for objects. A full bucket chains to another.</div>
+  </div>
+</div>
+{{< /diagram >}}
 
 
 Segcache has three components. The first component is called object store, which is the heap (cache space) allocated to the cache. Segcache divides the heap into segments, where each segment is a small log storing objects of *similar TTLs*. There are some similarities between slab and segment. However, slabs store objects of similar sizes, whereas segments store objects of any size but similar TTLs. 
@@ -104,8 +205,91 @@ In the following section, we will briefly describe the design philosophy of Segc
 Segcache has three design principles. 
 
 ### Sharing economy 
-![Memcached stores metadata alongside every object. Segcache stores shared metadata once in each segment header and once in each hash bucket, so each object carries little metadata of its own.](sharing.svg)
-{caption="*Figure 3.* Metadata sharing. Memcached keeps full metadata (yellow) with every object. Segcache moves the shared parts into each segment header (orange) and each hash bucket, leaving about 5 bytes per object." size="full" panels="0,0,222,158.97; 224,0,236,158.97; 478,0,147.65,158.97"}
+{{< diagram size="full" alt="Three panels. Memcached object store: every object is a block of per-object metadata followed by its data. Segcache object store: each segment starts with one shared header, and its objects carry only a thin sliver of their own metadata. Hash table: in each bucket, the first slot holds shared bucket info and the other seven hold object info." caption="*Figure 3.* Metadata sharing. Memcached keeps full metadata with every object. Segcache moves the shared parts into each segment header and each hash bucket, leaving about 5 bytes per object." >}}
+<style>
+  .d-ms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+  .d-ms-card { display: flex; flex-direction: column; padding: .8rem .85rem .85rem; border: 1px solid var(--fig-line); border-radius: 8px; background: var(--fig-surface); }
+  .d-ms-h { margin-bottom: .7rem; font-size: .9375rem; font-weight: 600; }
+  .d-ms-store { display: grid; gap: .45rem; }
+  .d-ms-row { display: flex; gap: .35rem; }
+  .d-ms-obj { display: flex; flex: var(--g, 1) 1 0; min-width: 0; height: 1.2rem; }
+  .d-ms-md { flex: 0 0 .9rem; border-radius: 2px 0 0 2px; background: #f5c542; }
+  .d-ms-data { flex: 1; border-radius: 0 2px 2px 0; background: #9cc3ef; }
+  .d-ms-seg { display: flex; gap: 2px; height: 1.75rem; padding: 2px; border: 1.5px solid #e8502c; border-radius: 4px; background: #fff; }
+  .d-ms-hdr { flex: 0 0 .9rem; border-radius: 2px; background: #e8502c; }
+  .d-ms-seg .d-ms-obj { height: auto; }
+  .d-ms-seg .d-ms-md { flex-basis: 3px; }
+  .d-ms-card > svg { display: block; width: 100%; height: auto; }
+  .d-ms-note { margin-top: auto; padding-top: .75rem; color: var(--fig-ink-2); }
+  @container (max-width: 44rem) {
+    .d-ms { grid-template-columns: minmax(0, 1fr); max-width: 24rem; margin-inline: auto; }
+    .d-ms-card > svg { max-width: 17rem; margin-inline: auto; }
+  }
+</style>
+<div class="fig-legend">
+  <span><i class="fig-key fig-key--box" style="--c: #f5c542"></i>Per-object metadata</span>
+  <span><i class="fig-key fig-key--box" style="--c: #9cc3ef"></i>Object data</span>
+  <span><i class="fig-key fig-key--box" style="--c: #e8502c"></i>Shared metadata</span>
+</div>
+<div class="d-ms">
+  <div class="d-ms-card">
+    <div class="d-ms-h">Memcached object store</div>
+    <div class="d-ms-store">
+      <div class="d-ms-row">
+        <span class="d-ms-obj" style="--g: 2"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 1.6"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 1.6"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 1.8"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+      </div>
+      <div class="d-ms-row">
+        <span class="d-ms-obj" style="--g: 3"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 2"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+      </div>
+      <div class="d-ms-row">
+        <span class="d-ms-obj" style="--g: 1.6"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 2.6"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 1.8"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+      </div>
+    </div>
+    <div class="d-ms-note">Every object carries all of its own metadata: 56 bytes in Memcached.</div>
+  </div>
+  <div class="d-ms-card">
+    <div class="d-ms-h">Segcache object store</div>
+    <div class="d-ms-store">
+      <div class="d-ms-seg">
+        <i class="d-ms-hdr"></i>
+        <span class="d-ms-obj" style="--g: 1.2"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 3"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 1"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 2.6"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+      </div>
+      <div class="d-ms-seg">
+        <i class="d-ms-hdr"></i>
+        <span class="d-ms-obj" style="--g: 1.4"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 1.2"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 1.2"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 1.3"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+        <span class="d-ms-obj" style="--g: 2.6"><i class="d-ms-md"></i><i class="d-ms-data"></i></span>
+      </div>
+    </div>
+    <div class="d-ms-note">Objects in a segment share its header: creation time, TTL, reference count and the next-segment pointer.</div>
+  </div>
+  <div class="d-ms-card">
+    <div class="d-ms-h">Hash table</div>
+    <!-- Reuses #d-sd-bucket and #d-sd-ah, defined in Figure 2. -->
+    <svg viewBox="0 0 220 98" aria-hidden="true">
+      <use href="#d-sd-bucket" x="4" y="2"/><use href="#d-sd-bucket" x="4" y="18"/><use href="#d-sd-bucket" x="4" y="34"/>
+      <use href="#d-sd-bucket" x="4" y="50"/><use href="#d-sd-bucket" x="4" y="66"/><use href="#d-sd-bucket" x="4" y="82"/>
+      <use href="#d-sd-bucket" x="122" y="2"/><use href="#d-sd-bucket" x="122" y="50"/>
+      <g fill="#f5c542"><rect x="122" y="2" width="10.5" height="10.5" rx="1.5"/><rect x="122" y="50" width="10.5" height="10.5" rx="1.5"/></g>
+      <g fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#d-sd-ah)">
+        <path d="M101 7.25 H119"/><path d="M101 55.25 H119"/>
+      </g>
+    </svg>
+    <div class="d-ms-note">Objects in a bucket share its first slot: an approximate last-access time, the CAS value and a spinlock.</div>
+  </div>
+</div>
+{{< /diagram >}}
 
 Sharing economy has become the norm of human society, and it has dramatically improved resource utilization. Similar ideas are also widely used in computer systems, cloud computing, multi-tenancy is common these days. Segcache applies a similar concept to reduce object metadata. It tries to maximize metadata sharing between objects in the same segment and objects in the same hash bucket. 
 First, objects in the same segment share the same creation time, TTL, expiration time, reference counter, next segment (object) pointer. These metadata are stored in the segment header shared by all objects in the same segment (usually 1000s to 10,000s of objects). 

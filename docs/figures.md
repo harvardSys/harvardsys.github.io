@@ -147,6 +147,7 @@ Examples to copy from:
 | `learning-augmented-heuristics` | 2×2 taxonomy, offline pre-training        | CSS grid                               |
 | `fifo-is-all-you-need`          | FIFO, S3-FIFO, SIEVE                      | wide SVG + narrow HTML (CSS animation) |
 | `segcache` (draft)              | Expiration techniques                     | plain HTML table                       |
+| `segcache` (draft)              | Segcache design                           | 3 cards + connectors that turn vertical when stacked |
 
 ## Check it
 
