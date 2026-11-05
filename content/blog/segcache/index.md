@@ -32,7 +32,7 @@ In our [previous work](https://www.usenix.org/system/files/osdi20-yang.pdf), we 
 While addressing TTLs is important and has also been recognized by [Memcached](https://github.com/memcached/memcached/issues/543) and [Redis](https://news.ycombinator.com/item?id=19664483). 
 We summarize existing techniques used in Memcached, Redis, and research systems in the following table. 
 
-{{< diagram size="large" caption="A summary of existing techniques for removing expired objects." >}}
+{{< diagram size="large" caption="*Figure 1.* Existing techniques for removing expired objects. None is both efficient (low CPU and memory-bandwidth cost) and sufficient (removes most expired objects)." >}}
 <style>
   .d-exp { width: 100%; border-collapse: collapse; font-size: 1rem; line-height: 1.3; text-align: center; }
   .d-exp th, .d-exp td { padding: .55rem .6rem; border: 1px solid #c7ced8; }
@@ -89,7 +89,8 @@ Pelikan Segcache has high memory efficiency, high performance, with the followin
 [^3]: When we compare object metadata, we do not consider the memory usage of the hash table in any system. 
 [^4]: When we measure throughput, we remove the networking stack and focus only on the storage stack. In production using kernel TCP/IP, the networking stack is often the throughput bottleneck. When we switch to a new networking stack (such as DPDK), the storage stack's throughput becomes important. 
 
-![Segcache designs.](segcache.svg "The design of Segcache.") 
+![Segcache has three components: TTL buckets, each rooted at a chain of segments; an object store divided into segments; and a bulk-chaining hash table. Writes go through a TTL bucket to the last segment of its chain, and reads look up the hash table, which points into a segment.](segcache.svg)
+{caption="*Figure 2.* The design of Segcache. A write appends the object to the last segment in its TTL bucket's chain; a read looks up the hash table, which points to the object's location in a segment." size="full" panels="20,190,860,780; 885,60,750,910; 1640,60,830,910"}
 
 
 Segcache has three components. The first component is called object store, which is the heap (cache space) allocated to the cache. Segcache divides the heap into segments, where each segment is a small log storing objects of *similar TTLs*. There are some similarities between slab and segment. However, slabs store objects of similar sizes, whereas segments store objects of any size but similar TTLs. 
@@ -103,7 +104,8 @@ In the following section, we will briefly describe the design philosophy of Segc
 Segcache has three design principles. 
 
 ### Sharing economy 
-![Sharing economy.](sharing.svg "Segcache reduces per-object metadata by sharing.") 
+![Memcached stores metadata alongside every object. Segcache stores shared metadata once in each segment header and once in each hash bucket, so each object carries little metadata of its own.](sharing.svg)
+{caption="*Figure 3.* Metadata sharing. Memcached keeps full metadata (yellow) with every object. Segcache moves the shared parts into each segment header (orange) and each hash bucket, leaving about 5 bytes per object." size="full" panels="0,0,222,158.97; 224,0,236,158.97; 478,0,147.65,158.97"}
 
 Sharing economy has become the norm of human society, and it has dramatically improved resource utilization. Similar ideas are also widely used in computer systems, cloud computing, multi-tenancy is common these days. Segcache applies a similar concept to reduce object metadata. It tries to maximize metadata sharing between objects in the same segment and objects in the same hash bucket. 
 First, objects in the same segment share the same creation time, TTL, expiration time, reference counter, next segment (object) pointer. These metadata are stored in the segment header shared by all objects in the same segment (usually 1000s to 10,000s of objects). 
@@ -123,11 +125,99 @@ Such property allows Segcache to use a background thread to scan the TTL buckets
 
 
 ### Macro management 
-![Macro management.](macromanagement.svg "Segcache performs macro management to achieve a high performance.") 
+Managing objects is hard, and it limits the throughput and scalability of existing in-memory caching systems. Figure 4 compares a system that manages objects with a system that manages segments (groups of objects). 
 
-Managing objects is hard, and it limits the throughput and scalability of existing in-memory caching systems. The figure below shows the comparisons of a system that manages objects and a system that manages segments (groups of objects). 
+{{< diagram size="large" alt="Two panels. Left, managing objects, for example in Memcached: objects sit in an object LRU queue and freed chunks in a free-chunk queue; a GET moves an object to the head of the LRU queue and a DELETE puts its chunk on the free-chunk queue, so most requests update a shared queue and take a lock, O(N request) locks. Right, managing segments in Segcache: objects are appended to segments chained per TTL bucket; a SET appends to the newest segment, and expiration or eviction frees a whole segment at once, so the chain changes only once per segment, O(N segment) locks." caption="*Figure 4.* Managing objects versus managing segments. An object-managed cache updates a shared queue, under a lock, on most requests. Segcache only changes its segment chains when a whole segment is added, expired, or evicted." >}}
+<style>
+  .d-mm { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .d-mm-card { display: flex; flex-direction: column; padding: .85rem .95rem; border: 1px solid var(--fig-line); border-radius: 8px; background: var(--fig-surface); }
+  .d-mm-h { font-size: .9375rem; font-weight: 600; }
+  .d-mm-sub { margin-bottom: .75rem; color: var(--fig-ink-2); }
+  .d-mm-q + .d-mm-q { margin-top: .8rem; }
+  .d-mm-ql { margin-bottom: .3rem; font-weight: 600; }
+  .d-mm svg { width: 100%; height: auto; }
+  .d-mm-note { margin-top: .25rem; color: var(--fig-ink-2); }
+  .d-mm-foot { margin-top: auto; padding-top: .7rem; }
+  .d-mm-foot div { padding-top: .6rem; border-top: 1px solid var(--fig-line); }
+  .d-mm-foot b { font-size: .9375rem; }
+  @container (max-width: 36rem) {
+    .d-mm { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <marker id="d-mm-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 z" fill="#4b5563"/>
+    </marker>
+  </defs>
+</svg>
+<div class="d-mm">
+  <div class="d-mm-card">
+    <div class="d-mm-h">Manage objects</div>
+    <div class="d-mm-sub">e.g., Memcached</div>
+    <div class="d-mm-q">
+      <div class="d-mm-ql">Object LRU queue</div>
+      <svg viewBox="0 0 300 52" aria-hidden="true">
+        <path d="M18 34 H282" stroke="#9ca3af" stroke-width="1.5"/>
+        <g fill="#d4e4f7" stroke="#2a78d6" stroke-width="1.5">
+          <rect x="6" y="24" width="24" height="20" rx="3"/><rect x="42" y="24" width="24" height="20" rx="3"/>
+          <rect x="78" y="24" width="24" height="20" rx="3"/><rect x="114" y="24" width="24" height="20" rx="3"/>
+          <rect x="150" y="24" width="24" height="20" rx="3"/><rect x="222" y="24" width="24" height="20" rx="3"/>
+          <rect x="258" y="24" width="24" height="20" rx="3"/>
+        </g>
+        <rect x="186" y="24" width="24" height="20" rx="3" fill="#2a78d6"/>
+        <path d="M198 21 C 170 2, 46 2, 21 19" fill="none" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#d-mm-ah)"/>
+      </svg>
+      <div class="d-mm-note">A GET moves the object to the head.</div>
+    </div>
+    <div class="d-mm-q">
+      <div class="d-mm-ql">Free-chunk queue</div>
+      <svg viewBox="0 0 300 52" aria-hidden="true">
+        <path d="M18 34 H174" stroke="#9ca3af" stroke-width="1.5"/>
+        <g fill="#ffffff" stroke="#2a78d6" stroke-width="1.5" stroke-dasharray="3 2">
+          <rect x="6" y="24" width="24" height="20" rx="3"/><rect x="42" y="24" width="24" height="20" rx="3"/>
+          <rect x="78" y="24" width="24" height="20" rx="3"/><rect x="114" y="24" width="24" height="20" rx="3"/>
+          <rect x="150" y="24" width="24" height="20" rx="3"/>
+        </g>
+        <rect x="258" y="24" width="24" height="20" rx="3" fill="#2a78d6"/>
+        <path d="M262 21 C 240 2, 200 2, 180 19" fill="none" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#d-mm-ah)"/>
+      </svg>
+      <div class="d-mm-note">A DELETE puts the freed chunk on the queue.</div>
+    </div>
+    <div class="d-mm-foot"><div><b>O(N<sub>request</sub>) locks</b><br>Most requests update a shared queue.</div></div>
+  </div>
+  <div class="d-mm-card">
+    <div class="d-mm-h">Manage segments</div>
+    <div class="d-mm-sub">Segcache</div>
+    <div class="d-mm-q">
+      <div class="d-mm-ql">Segment chain of one TTL bucket</div>
+      <svg viewBox="0 0 300 52" aria-hidden="true">
+        <path d="M94 34 H104 M190 34 H200" stroke="#9ca3af" stroke-width="1.5"/>
+        <g fill="#ffffff" stroke-width="1.5">
+          <rect x="6" y="22" width="88" height="24" rx="3" stroke="#c3c8d0" stroke-dasharray="3 2"/>
+          <rect x="104" y="22" width="86" height="24" rx="3" stroke="#e8502c"/>
+          <rect x="200" y="22" width="88" height="24" rx="3" stroke="#e8502c"/>
+        </g>
+        <g stroke="#e8502c" stroke-width="2.5" opacity=".75">
+          <path d="M112 26 V42 M119 26 V42 M126 26 V42 M133 26 V42 M140 26 V42 M147 26 V42 M154 26 V42 M161 26 V42 M168 26 V42 M175 26 V42 M182 26 V42"/>
+          <path d="M208 26 V42 M215 26 V42 M222 26 V42 M229 26 V42 M236 26 V42 M243 26 V42"/>
+        </g>
+        <path d="M14 26 V42 M21 26 V42 M28 26 V42 M35 26 V42 M42 26 V42 M49 26 V42 M56 26 V42 M63 26 V42 M70 26 V42 M77 26 V42 M84 26 V42" stroke="#c3c8d0" stroke-width="2.5"/>
+        <path d="M276 3 V15" stroke="#e8502c" stroke-width="2.5"/>
+        <path d="M271 9 C 260 9, 252 12, 251 20" fill="none" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#d-mm-ah)"/>
+      </svg>
+      <div class="d-mm-note">A SET appends to the newest segment. Objects never move between queues.</div>
+    </div>
+    <div class="d-mm-q">
+      <div class="d-mm-ql">Expiration and eviction</div>
+      <div class="d-mm-note">The oldest segment (dashed) is freed as a whole, with one chain update for thousands of objects.</div>
+    </div>
+    <div class="d-mm-foot"><div><b>O(N<sub>segment</sub>) locks</b><br>The chain changes once per segment.</div></div>
+  </div>
+</div>
+{{< /diagram >}}
 
-A system that manages objects often needs to maintain several queues, such as object LRU queue, free chunk queue. Most operations require touching at least one queue. For example, a get request moves an object to the LRU queue head,[^5] and a delete request requires moving the freed object space to the free chunk queue. In contrast, Segcahce does not maintain object queues. It maintains segment queues, which requires much fewer bookkeeping operations. The necessary bookkeeping operations are performed sequentially in batch, which significantly improves the throughput. 
+A system that manages objects often needs to maintain several queues, such as object LRU queue, free chunk queue. Most operations require touching at least one queue. For example, a get request moves an object to the LRU queue head,[^5] and a delete request requires moving the freed object space to the free chunk queue. In contrast, Segcache does not maintain object queues. It maintains segment queues, which requires much fewer bookkeeping operations. The necessary bookkeeping operations are performed sequentially in batch, which significantly improves the throughput. 
 
 [^5]: Modern caching systems avoid popping up a popular object each time it gets a request, but still, the chain operation is $O(N_{\text{request}})$.  
 
@@ -142,23 +232,54 @@ We evaluated Segcache using production traces from Twitter, and we compare Segca
 ### Memory efficiency 
 This is one of the most important metrics for caches. Instead of showing miss ratio curves (miss ratio vs cache size), we show the relative cache size to achieve the production miss ratios. This is more intuitive as it shows that if we want to achieve a production miss ratio, how much DRAM do we need for each system. 
 
-![Memory efficiency.](evalEfficiency.svg "The relative memory footprint to achieve production miss ratio.") 
+{{< diagram size="small" caption="*Figure 5.* Cache size each system needs to reach the production miss ratio, relative to Pelikan slab storage (dashed line; lower is better). Segcache needs 42–88% less memory than Pelikan slab. Bars with a break mark run past the top of the scale." >}}
+<div class="fig-legend">
+  <span><i class="fig-key fig-key--dash" style="--c: #4b5563"></i>Pelikan slab (= 1)</span>
+  <span><i class="fig-key fig-key--box" style="--c: #2a78d6"></i>Memcached</span>
+  <span><i class="fig-key fig-key--box" style="--c: #1baf7a"></i>Memcached + scanning</span>
+  <span><i class="fig-key fig-key--box" style="--c: #eda100"></i>LHD + sampling</span>
+  <span><i class="fig-key fig-key--box" style="--c: #6250d6"></i>Hyperbolic + sampling</span>
+  <span><i class="fig-key fig-key--box" style="--c: #e8502c"></i>Segcache</span>
+</div>
+<div class="fig-plots fig-plots--1">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Cache size to reach the production miss ratio</div>
+    <img src="figs/eval-memory-efficiency.svg" width="320" height="240" alt="Grouped bars of relative cache size for five Twitter workloads: content, user1, user2, negative and multi-tenant. Segcache needs 0.38, 0.58, 0.58, 0.45 and 0.13 of Pelikan slab's cache size, the lowest on every workload. LHD with sampling runs past the scale on user1, user2 and negative, as does Memcached on user2.">
+  </figure>
+</div>
+{{< /diagram >}}
 
-We observe that compared to slab storage (the bar labeled with Production), Segcache can reduce the miss ratio by 40%-90%. While comparing to state-of-the-art, Segcache reduces the miss ratio by 22%-60%. This indicates that by switching to the new backend, we can significantly reduce the memory footprint. 
+We observe that compared to Pelikan slab storage (the dashed line), Segcache reduces the memory footprint by 40%-90%. Compared to the state of the art, Segcache reduces the memory footprint by 22%-60%. This indicates that by switching to the new backend, we can significantly reduce the memory footprint. 
 
 
-### throughput and scalability
-Besides memory efficiency, throughput and thread scalability are also critical. The two figures below show that Segcache achieves a similar single-thread throughput as slab storage, both of which are significantly higher than Memcached and research systems. 
+### Throughput and scalability
+Besides memory efficiency, throughput and thread scalability are also critical. Figure 6 shows that Segcache achieves single-thread throughput similar to Pelikan slab storage, both of which are significantly higher than Memcached and the research systems. 
 
-![Single-thread throughput.](evalThroughput.svg "The throughput of different systems.") 
-
-
-![Mulit-thread throughput.](evalScalability.svg "The scalability of different systems.") 
+{{< diagram size="medium" caption="*Figure 6.* Throughput of the storage stack, with networking removed (higher is better). On one thread, Segcache is on par with Pelikan slab and faster than Memcached and the research systems on every workload. With more threads, Segcache scales almost linearly, reaching about 8× Memcached's throughput at 24 threads. Memcached + scanning is shown up to 8 threads." >}}
+<div class="fig-legend">
+  <span><i class="fig-key fig-key--box" style="--c: #4b5563"></i>Pelikan slab</span>
+  <span><i class="fig-key fig-key--box" style="--c: #2a78d6"></i>Memcached</span>
+  <span><i class="fig-key fig-key--box" style="--c: #1baf7a"></i>Memcached + scanning</span>
+  <span><i class="fig-key fig-key--box" style="--c: #eda100"></i>LHD + sampling</span>
+  <span><i class="fig-key fig-key--box" style="--c: #6250d6"></i>Hyperbolic + sampling</span>
+  <span><i class="fig-key fig-key--box" style="--c: #e8502c"></i>Segcache</span>
+</div>
+<div class="fig-plots">
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Single thread</div>
+    <img src="figs/eval-throughput.svg" width="320" height="240" alt="Grouped bars of single-thread throughput in million queries per second for five workloads. Segcache reaches 4.0, 5.5, 4.7, 4.2 and 3.8 MQPS, close to Pelikan slab's 4.0, 4.4, 5.4, 5.1 and 4.2, and above Memcached's 2.7 to 3.9 and every other system.">
+  </figure>
+  <figure class="fig-plot">
+    <div class="fig-plot-title">Scaling with threads</div>
+    <img src="figs/eval-scalability.svg" width="320" height="240" alt="Throughput against 1 to 24 threads. Segcache grows almost linearly from about 4 to about 71 MQPS. Memcached levels off near 9 MQPS from 12 threads on. Memcached with scanning, shown up to 8 threads, tracks Memcached.">
+  </figure>
+</div>
+{{< /diagram >}}
 
 In terms of scalability, we observe that Memcached can scale to around 8 threads. After that, the throughput does not increase with cores. Meanwhile, Segcache can scale almost linearly to 24 threads, and at 24 threads, it achieves 8x higher throughput than Memcached. 
 
 
-In conclusion, we recently designed a new storage backend for Pelikan, which is called Segcache. Segcahe groups objects of similar TTLs into segments and provides efficient and proactive TTL expiration, tiny object metadata, and almost no memory fragmentation. As a result of this design, we show that Segcache can significantly reduce Twitter's current caching clusters' memory footprint. Besides, it allows Pelikan to better utilize the multiple cores of modern CPUs. 
+In conclusion, we recently designed a new storage backend for Pelikan, which is called Segcache. Segcache groups objects of similar TTLs into segments and provides efficient and proactive TTL expiration, tiny object metadata, and almost no memory fragmentation. As a result of this design, we show that Segcache can significantly reduce Twitter's current caching clusters' memory footprint. Besides, it allows Pelikan to better utilize the multiple cores of modern CPUs. 
 
 
 
