@@ -70,7 +70,11 @@
       </tr></thead>
       <tbody>
       {{- range $row := $rows }}
-        <tr><th scope="row">{{ $row }}</th>
+        {{- $label := $row -}}
+        {{- if and (in (slice "float64" "int" "int64") (printf "%T" $row)) (eq (math.Floor $row) (float $row)) -}}
+          {{- $label = lang.FormatNumber 0 $row -}}
+        {{- end }}
+        <tr><th scope="row">{{ $label }}</th>
         {{- range $c := $cols -}}
           {{- $cell := "" -}}
           {{- range $i, $v := $c.cats -}}
@@ -79,7 +83,11 @@
                 {{- $cell = index $c.t.text $i -}}
               {{- else -}}
                 {{- $cell = index $c.vals $i -}}
-                {{- if isset $spec "decimals" -}}{{- $cell = lang.FormatNumber (int $spec.decimals) $cell -}}{{- end -}}
+                {{- if isset $spec "decimals" -}}
+                  {{- $cell = lang.FormatNumber (int $spec.decimals) $cell -}}
+                {{- else if and (in (slice "float64" "int" "int64") (printf "%T" $cell)) (eq (math.Floor $cell) (float $cell)) -}}
+                  {{- $cell = lang.FormatNumber 0 $cell -}}   {{- /* whole numbers: 1,050,000 rather than 1.05e+06 */ -}}
+                {{- end -}}
               {{- end -}}
             {{- end -}}
           {{- end -}}

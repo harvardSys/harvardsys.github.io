@@ -95,7 +95,15 @@ reference lines (`shapes`) and direct labels (`annotations`).
 - **Stacked areas:** traces with the same `"stackgroup"`.
 - **Box plots:** `"type": "box"` with precomputed `q1`, `median`, `q3`,
   `lowerfence`, `upperfence` arrays (one value per box).
-- **Heat maps:** `"type": "heatmap"` with `x`, `y`, `z` and a `colorscale`.
+- **Heat maps:** `"type": "heatmap"` with `x`, `y`, `z` and a `colorscale`
+  (one hue, light to dark). Heat maps and dot-only scatters
+  (`"mode": "markers"`) hover the nearest cell or dot instead of a whole
+  column, and colour bars get the chart style.
+- **Drawing order:** traces are listed in hover labels and the data table in
+  their order in `data`; use `"zorder"` to draw a context series behind
+  without moving it in that order.
+- **Hover formats** don't support `+` (`%{y:+.1f}` shows the raw value): put
+  signed values in a `text` array instead.
 - **Sizes:** chart text does not scale with the chart, so give charts room:
   `size="medium"` for one panel, `size="large"` for two side by side,
   `size="wide"` for three or more (`fig-plots--3`). Panels stack on phones.

@@ -92,7 +92,7 @@
     font: { family: FONT, size: 12, color: MUTED },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    margin: { l: 4, r: 8, t: 30, b: 4 },     // automargin grows these to fit labels
+    margin: { l: 4, r: 14, t: 30, b: 4 },    // automargin grows these to fit labels
     showlegend: false,                       // legends are HTML (.fig-legend)
     dragmode: false,
     hovermode: 'x unified',
@@ -115,6 +115,17 @@
 
   function count(t) {
     return (t.y || t.x || []).length;
+  }
+
+  var COLORBAR = {
+    thickness: 10,
+    outlinewidth: 0,
+    tickfont: { size: 12, color: MUTED },
+    title: { font: { size: 12, color: MUTED } }
+  };
+
+  function dotsOnly(t) {
+    return (t.type || 'scatter') === 'scatter' && t.mode === 'markers';
   }
 
   function styleTrace(t, spec) {
@@ -147,12 +158,18 @@
         base.hoverinfo = 'skip';
         delete base.hovertemplate;
       }
+    } else if (type === 'heatmap') {
+      base.colorbar = COLORBAR;
+      base.hoverongaps = false;
     } else if (type === 'box') {
       base.line = { color: c, width: 1.5 };
       base.fillcolor = tint(c, 0.22);
       base.whiskerwidth = 0.5;
       base.boxpoints = false;
       base.hoverinfo = 'y';
+    }
+    if (type === 'scatter' && t.marker && t.marker.showscale) {
+      base.marker = merge(base.marker || {}, { colorbar: COLORBAR });
     }
     var own = merge({}, t);
     delete own.color;               // site keys, not plotly.js attributes
@@ -191,9 +208,10 @@
   }
 
   function styleLayout(spec, data) {
-    var lines = data.some(function (t) { return (t.type || 'scatter') === 'scatter'; });
+    var lines = data.some(function (t) { return (t.type || 'scatter') === 'scatter' && !dotsOnly(t); });
     var bars = data.some(function (t) { return t.type === 'bar'; });
     var horizontal = data.some(function (t) { return t.orientation === 'h'; });
+    var points = data.length && data.every(function (t) { return t.type === 'heatmap' || dotsOnly(t); });
 
     // Defaults by chart type; the spec's own layout always has the last word.
     var base = merge(LAYOUT, {});
@@ -203,6 +221,10 @@
         showspikes: true, spikemode: 'across', spikesnap: 'cursor',
         spikecolor: SPIKE, spikethickness: 1, spikedash: 'dot'
       });
+    }
+    if (points) {
+      // Heat maps and dot plots: hover the nearest cell or dot.
+      base.hovermode = 'closest';
     }
     if (horizontal) {
       // Horizontal bars and boxes: grid along x, categories read top to bottom.
