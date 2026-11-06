@@ -1,9 +1,16 @@
+{{- /* Context is a page (listings), or a dict {page, showLastmod} (single post page). */ -}}
+{{- $page := . -}}
+{{- $showLastmod := false -}}
+{{- if reflect.IsMap . -}}
+  {{- $page = .page -}}
+  {{- $showLastmod = .showLastmod -}}
+{{- end -}}
 <div class="text-sm antialiased" style="display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem 1rem;">
-  {{- $datetime := default .Date .Params.eventTime -}}
+  {{- $datetime := default $page.Date $page.Params.eventTime -}}
   {{- if $datetime -}}
   <span style="display:inline-flex; align-items:center; gap:0.25rem;">
     <span class="material-icons-outlined" style="font-size:1rem; line-height:1;">event</span>
-    {{- if .Params.eventTime -}}
+    {{- if $page.Params.eventTime -}}
     <time id="event-date-{{ $datetime | time.Format "20060102" }}">
       {{- $datetime | time.Format "Jan 2, 2006 3:04 PM" -}}
     </time>
@@ -12,13 +19,22 @@
     {{- end -}}
   </span>
   {{- end -}}
-  {{- if .Params.location -}}
+  {{- /* "Updated" date: post page only, when lastmod falls on a later day than date (not for events). */ -}}
+  {{- if and $showLastmod (not $page.Params.eventTime) (not $page.Date.IsZero) (not $page.Lastmod.IsZero) -}}
+  {{- if gt ($page.Lastmod | time.Format "2006-01-02") ($page.Date | time.Format "2006-01-02") -}}
   <span style="display:inline-flex; align-items:center; gap:0.25rem;">
-    <span class="material-icons-outlined" style="font-size:1rem; line-height:1;">location_on</span>
-    <span>{{- .Params.location -}}</span>
+    <span class="material-icons-outlined" style="font-size:1rem; line-height:1;">update</span>
+    <span>Updated <time datetime="{{ $page.Lastmod | time.Format "2006-01-02T15:04:05Z07:00" }}">{{- $page.Lastmod | time.Format ":date_medium" -}}</time></span>
   </span>
   {{- end -}}
-  {{- $single_author := or .Params.author .Params.speaker site.Params.author -}}
+  {{- end -}}
+  {{- if $page.Params.location -}}
+  <span style="display:inline-flex; align-items:center; gap:0.25rem;">
+    <span class="material-icons-outlined" style="font-size:1rem; line-height:1;">location_on</span>
+    <span>{{- $page.Params.location -}}</span>
+  </span>
+  {{- end -}}
+  {{- $single_author := or $page.Params.author $page.Params.speaker site.Params.author -}}
   {{- if $single_author -}}
   <span style="display:inline-flex; align-items:center; gap:0.25rem;">
     <span class="material-icons-outlined" style="font-size:1rem; line-height:1;">person</span>

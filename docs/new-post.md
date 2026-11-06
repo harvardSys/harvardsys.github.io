@@ -110,3 +110,14 @@ Follow the following guide:
 ## Publishing Your Post
 
 After setting `draft` to `false`, you may create a pull request to merge your post into the `master` branch. Once the pull request is reviewed and approved, the post will be published on the website.
+
+## Updating a Published Post
+
+If you make a substantive change to a post after it is published, add or bump `lastmod` in the front matter. The post then shows an "Updated" date next to its publish date (only when `lastmod` falls on a later day than `date`). Skip it for typo fixes.
+
+```markdown
++++
+date = 2026-10-27T12:00:00-04:00
+lastmod = 2026-11-06T16:00:00-05:00
++++
+```
