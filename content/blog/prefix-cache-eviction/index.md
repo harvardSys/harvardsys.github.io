@@ -10,21 +10,19 @@ summary = 'We evaluated 14 cache eviction algorithms on two production LLM trace
 tldr = 'Prefix-cache reuse comes almost entirely from the steady pacing of active sessions, so recency predicts it well and thirteen more advanced eviction algorithms give LRU nothing. The remaining gap to the offline optimum is not a ranking problem: it comes from one-hit prompts, from misses that cost different amounts of compute, and from a few huge sessions. Keep LRU and add one signal at a time for whichever of those a deployment actually has.'
 +++
 
-Agentic and multi-turn LLM traffic is long, and it grows with every turn: each step resends the whole conversation so far. In the FreeInference trace, the median request inside a multi-turn session reaches 66,605 tokens, compared to 3,386 tokens across all requests, and sequence length reaches 111K tokens at the 90th percentile.
+For decades, LRU has served as the classic baseline for caching research to beat. In web caches, databases, and operating systems, modern algorithms like ARC, LIRS, and S3-FIFO comfortably outperform simple recency.
 
-Prefill is what makes that expensive. Each uncached token attends to every earlier token in the full-attention layers, so cost grows faster than linearly in sequence length, and Mixture-of-Experts (MoE) models make attention an even larger share. Prefix caching is what avoids the work: serving engines keep cached key-value (KV) state in fixed-length blocks, typically 16 tokens; a request reuses the KV state of its longest cached prefix and prefills only the rest, so in an agent loop every step reuses the KV state of all earlier steps.
+LLM prefix caching tells the opposite story. Across two large production traces from FreeInference and Chutes, we benchmarked 14 eviction algorithms against standard LRU. To our surprise, none of them beat LRU. Advanced frequency filters, quick-demotion queues, and learned policies all failed to outperform recency. Most algorithms are close to LRU, while several collapse dramatically.
 
-But the cache is small next to the traffic it serves. One 16-token block of Qwen3-Coder-30B KV state is 1.5 MiB, so a 24 GiB per-replica cache holds 16,384 blocks, or 262K tokens: about four of those median multi-turn requests. The engine is therefore evicting almost continuously, and every block it drops is prefill it may have to redo.
+Yet there is still headroom left to claim. Why can't any modern replacement policy beat a decades-old heuristic to capture it? Prefix reuse breaks the fundamental assumptions eviction algorithms were built on.
 
-Both vLLM and SGLang make that choice with LRU, which ranks on recency alone. Decades of cache-replacement research have produced algorithms that beat LRU, and on web and block-storage workloads ARC, LIRS, LHD, S3-FIFO, and W-TinyLFU all do. We tested 14 online eviction algorithms on two production LLM traces. None of them beat LRU. Nor is the prefix-cache workload simply easy: Belady's offline optimum is 8.1 points above LRU at 24 GiB on FreeInference, so there is real headroom that no online algorithm reaches. The interesting question is therefore not which algorithm ranks highest, but what the workload is doing that defeats all of them.
+## Fancy eviction algorithms do not beat LRU
 
-## Fancy eviction does not beat LRU
+To see whether sophisticated replacement policies deliver on their promise, we benchmarked 14 algorithms across realistic cache capacities, from a single GPU's memory up to terabyte-scale pools.
 
-We evaluate standard and specialized cache replacement algorithms on production LLM inference traces across a range of cache capacities. This part measures whether the more complex online algorithms improve hit ratio over default LRU, and how close any of them comes to Belady's offline optimum.
+### Setup
 
-### How we tested
-
-In our paper, [When Fancy Eviction Fails: Rethinking Cache Replacement For LLM Prefix Reuse](https://arxiv.org/abs/2609.28870), we evaluated 14 online algorithms alongside Belady's offline optimum across two production traces, [FreeInference](https://freeinference.org/) and [Chutes](https://chutes.ai/), totaling over 20 billion processed tokens. We simulated per-replica GPU HBM (24 to 120 GiB) and global pool tiers (0.25 to 12 TiB) using [PrefixSim](https://github.com/cacheMon/PrefixSim), an open-source simulator built on libCacheSim that enforces request-level residency: all blocks of a request must be resident at the same time during its prefill.
+In our paper, [When Fancy Eviction Fails: Rethinking Cache Replacement For LLM Prefix Reuse](https://arxiv.org/abs/2609.28870), we evaluated 14 online algorithms alongside Belady's offline optimum across two production traces, [FreeInference](https://freeinference.org/) and [Chutes](https://chutes.ai/), totaling over 20 billion processed tokens. We simulated per-replica GPU HBM (24 to 120 GiB) and global pool tiers (0.25 to 12 TiB) using [PrefixSim](https://github.com/cacheMon/PrefixSim), an open-source simulator built on libCacheSim that enforces request-level residency so that all blocks of a request must be resident in memory during its prefill.
 
 | | FreeInference | Chutes |
 | --- | ---: | ---: |
@@ -35,9 +33,9 @@ In our paper, [When Fancy Eviction Fails: Rethinking Cache Replacement For LLM P
 | Unique tokens | 0.63B | 2.23B |
 | Average request | 32.0K tokens | 18.7K tokens |
 
-The 14 algorithms group by what they rank on: recency (LRU), quick demotion (ARC, SIEVE, S3-FIFO, S4-FIFO, LIRS), analytic modeling (LHD), frequency (LFU, W-TinyLFU), learned replacement (LeCaR, LRB, 3LCache), and prefix-cache-specific heuristics (Workload-aware, AsymCache).
+The 14 evaluated algorithms span several distinct design paradigms based on their primary eviction signal: simple recency (LRU), quick demotion (ARC, SIEVE, S3-FIFO, S4-FIFO, LIRS), frequency tracking (LFU, W-TinyLFU), analytic modeling (LHD), machine-learned policies (LeCaR, LRB, 3LCache), and prefix-specific heuristics (Workload-aware, AsymCache).
 
-### What the results show
+### The results
 
 Across this grid, no online algorithm reliably outperforms default LRU.
 
@@ -393,7 +391,7 @@ In a global memory pool, this difference is unmeasurable because the pool easily
 
 **Takeaway:** Use fine-grained contiguous block eviction in GPU HBM to avoid eviction penalties on skewed session footprints, and use coarse eviction in secondary pools to eliminate metadata overhead.
 
-## What to do with this
+## Summary
 
 These findings define a straightforward decision path for LLM serving stacks:
 
