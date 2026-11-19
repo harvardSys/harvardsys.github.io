@@ -39,56 +39,91 @@ The 14 evaluated algorithms span several distinct design paradigms based on thei
 
 Across this grid, no online algorithm reliably outperforms default LRU.
 
-{{< diagram size="wide" caption="*Figure 1.* Block hit ratio relative to LRU, in percentage points, at four cache sizes on both traces. Anything left of the line is worse than LRU. LFU runs off the scale: it is 9.5 to 38.2 points below LRU on FreeInference and 25.7 to 34.0 points below on Chutes. LRU's own hit ratio is 0.611, 0.839, 0.918 and 0.938 on FreeInference and 0.635, 0.702, 0.727 and 0.759 on Chutes; exact values for every bar are in the data table under each panel." >}}
+{{< diagram size="wide" caption="*Figure 1.* Block hit ratio on the two production traces for fourteen online eviction algorithms and Belady's offline optimum, at the four cache sizes: the same measurement, grouping and colours as Figure 2 of the paper. The shaded groups are per-replica HBM; 1 TiB is the global pool. LRU is the first bar of each group, so an algorithm beats it only where its bar is taller. Note the axis starts at 0.45 on FreeInference and 0.35 on Chutes; exact values for every bar are in the data table under each panel." >}}
 <div class="fig-legend">
-  <span><i class="fig-key fig-key--box fig-key--red"></i>24 GiB</span>
-  <span><i class="fig-key fig-key--box fig-key--amber"></i>48 GiB</span>
-  <span><i class="fig-key fig-key--box fig-key--teal"></i>96 GiB</span>
-  <span><i class="fig-key fig-key--box fig-key--blue"></i>1 TiB</span>
+  <span><i class="fig-key fig-key--box" style="--c: #d62728"></i>LRU</span>
+  <span><i class="fig-key fig-key--box" style="--c: #9467bd"></i>ARC</span>
+  <span><i class="fig-key fig-key--box" style="--c: #7f7f7f"></i>SIEVE</span>
+  <span><i class="fig-key fig-key--box" style="--c: #2ca02c"></i>S3-FIFO</span>
+  <span><i class="fig-key fig-key--box" style="--c: #00611f"></i>S4-FIFO</span>
+  <span><i class="fig-key fig-key--box" style="--c: #17becf"></i>LIRS</span>
+  <span><i class="fig-key fig-key--box" style="--c: #ff7f0e"></i>LHD</span>
+  <span><i class="fig-key fig-key--box" style="--c: #8c564b"></i>LFU</span>
+  <span><i class="fig-key fig-key--box" style="--c: #4b5563"></i>W-TinyLFU</span>
+  <span><i class="fig-key fig-key--box" style="--c: #1f77b4"></i>LeCaR</span>
+  <span><i class="fig-key fig-key--box" style="--c: #393b79"></i>3LCache</span>
+  <span><i class="fig-key fig-key--box" style="--c: #800000"></i>LRB</span>
+  <span><i class="fig-key fig-key--box" style="--c: #e377c2"></i>Workload-aware</span>
+  <span><i class="fig-key fig-key--box" style="--c: #aec7e8"></i>AsymCache</span>
+  <span><i class="fig-key fig-key--box" style="--c: #c8a400"></i>Belady (OPT)</span>
 </div>
 <div class="fig-plots fig-plots--1">
   <figure class="fig-plot">
     <div class="fig-plot-title">FreeInference</div>
-    <div class="fig-plot-sub">Right of the line is better than LRU</div>
-    {{< plotly height="520" alt="Horizontal bars of block hit ratio relative to LRU on the FreeInference trace, at 24, 48, 96 GiB and 1 TiB. ARC, SIEVE, S3-FIFO, S4-FIFO, LIRS, LHD, LeCaR, 3LCache, Workload-aware and AsymCache all sit within 1.3 points of zero at every size. LRB is up to 4.9 points below LRU, W-TinyLFU falls to 17.0 points below at 1 TiB, and LFU runs off the left edge of the scale. Belady is the only series meaningfully above zero, by 8.1 points at 24 GiB falling to 0.2 points at 1 TiB." >}}
+    <div class="fig-plot-sub">Taller is better</div>
+    {{< plotly height="380" alt="Grouped vertical bars of block hit ratio on the FreeInference trace, one group per cache size at 24, 48, 96 GiB and 1 TiB, with fifteen bars per group: fourteen online algorithms and Belady's offline optimum. Within each group every bar is nearly the same height except LFU, which is far shorter throughout, and Belady, which is the tallest. LRU, the first bar of each group, reaches 0.611, 0.839, 0.918 and 0.938, and Belady reaches 0.692, 0.889, 0.934 and 0.940. The groups rise steeply with cache size and the spread between algorithms narrows as they do." >}}
     {
-      "unit": "pts",
-      "decimals": 2,
-      "xname": "Algorithm",
+      "decimals": 3,
+      "xname": "Cache size",
       "data": [
-        {"type": "bar", "orientation": "h", "name": "24 GiB", "color": "red", "y": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"], "x": [0.58, 0.56, 1.02, 1.05, 0.31, 1.28, -9.52, -0.37, 0.7, -3.18, 0.61, 0.3, 0.0, 8.13]},
-        {"type": "bar", "orientation": "h", "name": "48 GiB", "color": "amber", "y": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"], "x": [0.45, 0.05, -0.29, -0.07, 0.21, 0.54, -30.82, -2.39, 0.23, -4.9, -0.18, -0.02, 0.0, 5.02]},
-        {"type": "bar", "orientation": "h", "name": "96 GiB", "color": "teal", "y": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"], "x": [0.19, 0.02, -0.52, -0.27, -0.17, 0.14, -38.21, -5.13, 0.05, -2.31, -0.42, -0.28, 0.0, 1.62]},
-        {"type": "bar", "orientation": "h", "name": "1 TiB", "color": "blue", "y": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"], "x": [0.03, 0.03, 0.0, 0.05, -0.28, 0.0, -34.86, -16.99, 0.02, -0.19, -0.03, -0.07, 0.0, 0.21]}
+        {"type": "bar", "name": "LRU", "color": "#d62728", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6107, 0.8387, 0.9175, 0.9376]},
+        {"type": "bar", "name": "ARC", "color": "#9467bd", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6165, 0.8432, 0.9194, 0.9379]},
+        {"type": "bar", "name": "SIEVE", "color": "#7f7f7f", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6163, 0.8392, 0.9177, 0.9379]},
+        {"type": "bar", "name": "S3-FIFO", "color": "#2ca02c", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6209, 0.8358, 0.9123, 0.9376]},
+        {"type": "bar", "name": "S4-FIFO", "color": "#00611f", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6212, 0.838, 0.9148, 0.9381]},
+        {"type": "bar", "name": "LIRS", "color": "#17becf", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6138, 0.8408, 0.9158, 0.9348]},
+        {"type": "bar", "name": "LHD", "color": "#ff7f0e", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6235, 0.8441, 0.9189, 0.9376]},
+        {"type": "bar", "name": "LFU", "color": "#8c564b", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.5155, 0.5305, 0.5354, 0.589]},
+        {"type": "bar", "name": "W-TinyLFU", "color": "#4b5563", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.607, 0.8148, 0.8662, 0.7677]},
+        {"type": "bar", "name": "LeCaR", "color": "#1f77b4", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6177, 0.841, 0.918, 0.9378]},
+        {"type": "bar", "name": "3LCache", "color": "#393b79", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6168, 0.8369, 0.9133, 0.9373]},
+        {"type": "bar", "name": "LRB", "color": "#800000", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.5789, 0.7897, 0.8944, 0.9357]},
+        {"type": "bar", "name": "Workload-aware", "color": "#e377c2", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6137, 0.8385, 0.9147, 0.9369]},
+        {"type": "bar", "name": "AsymCache", "color": "#aec7e8", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6107, 0.8387, 0.9175, 0.9376]},
+        {"type": "bar", "name": "Belady (OPT)", "color": "#c8a400", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.692, 0.8889, 0.9337, 0.9397]}
       ],
       "layout": {
         "barmode": "group",
-        "xaxis": {"title": {"text": "Hit ratio vs. LRU (percentage points)"}, "range": [-12, 9], "dtick": 3, "zeroline": false},
-        "yaxis": {"categoryorder": "array", "categoryarray": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"]},
-        "shapes": [{"type": "line", "x0": 0, "x1": 0, "yref": "paper", "y0": 0, "y1": 1, "layer": "between", "line": {"color": "#1f2328", "width": 1.5}}]
+        "bargap": 0.25,
+        "bargroupgap": 0.05,
+        "xaxis": {"title": {"text": "Cache size"}},
+        "yaxis": {"title": {"text": "Block hit ratio"}, "range": [0.45, 0.96], "dtick": 0.1},
+        "shapes": [{"type": "rect", "xref": "x", "yref": "paper", "x0": -0.5, "x1": 2.5, "y0": 0, "y1": 1, "fillcolor": "#2a78d6", "opacity": 0.05, "line": {"width": 0}, "layer": "below"}]
       }
     }
     {{< /plotly >}}
   </figure>
   <figure class="fig-plot">
     <div class="fig-plot-title">Chutes</div>
-    <div class="fig-plot-sub">Right of the line is better than LRU</div>
-    {{< plotly height="520" alt="Horizontal bars of block hit ratio relative to LRU on the Chutes trace, at 24, 48, 96 GiB and 1 TiB. LHD, ARC, LeCaR, 3LCache, Workload-aware and AsymCache all sit within 0.9 points of zero. S3-FIFO is up to 5.2 points below LRU, SIEVE, S4-FIFO, LIRS and LRB up to 3.4 points below, W-TinyLFU is 8.8 to 20.7 points below, and LFU runs off the left edge of the scale. Belady is 8.0 points above LRU at 24 GiB falling to 1.0 point at 1 TiB." >}}
+    <div class="fig-plot-sub">Taller is better</div>
+    {{< plotly height="380" alt="Grouped vertical bars of block hit ratio on the Chutes trace, one group per cache size at 24, 48, 96 GiB and 1 TiB, with fifteen bars per group: fourteen online algorithms and Belady's offline optimum. LRU, the first bar of each group, reaches 0.635, 0.702, 0.727 and 0.759, and Belady reaches 0.714, 0.747, 0.760 and 0.769. LFU is far shorter in every group, 0.378 at 24 GiB, and W-TinyLFU is clearly short as well. SIEVE, S3-FIFO, S4-FIFO and LIRS fall below LRU in the middle groups. The hit ratio rises much more slowly with cache size than on FreeInference." >}}
     {
-      "unit": "pts",
-      "decimals": 2,
-      "xname": "Algorithm",
+      "decimals": 3,
+      "xname": "Cache size",
       "data": [
-        {"type": "bar", "orientation": "h", "name": "24 GiB", "color": "red", "y": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"], "x": [-0.02, -2.92, -4.32, -3.04, -0.97, 0.53, -25.7, -8.94, -0.13, -2.85, -0.42, -0.88, -0.01, 7.96]},
-        {"type": "bar", "orientation": "h", "name": "48 GiB", "color": "amber", "y": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"], "x": [-0.06, -2.44, -5.15, -1.6, -2.18, 0.33, -32.01, -8.81, -0.14, -2.08, -0.52, -0.54, -0.01, 4.54]},
-        {"type": "bar", "orientation": "h", "name": "96 GiB", "color": "teal", "y": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"], "x": [0.06, -1.25, -3.07, -0.7, -3.43, 0.3, -33.97, -10.65, 0.04, -0.7, -0.1, -0.34, 0.0, 3.32]},
-        {"type": "bar", "orientation": "h", "name": "1 TiB", "color": "blue", "y": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"], "x": [0.07, -0.06, -0.23, -0.01, -2.47, 0.1, -32.34, -20.67, 0.09, -0.75, -0.09, -0.19, 0.0, 1.02]}
+        {"type": "bar", "name": "LRU", "color": "#d62728", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6346, 0.7019, 0.7269, 0.7587]},
+        {"type": "bar", "name": "ARC", "color": "#9467bd", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6344, 0.7013, 0.7275, 0.7594]},
+        {"type": "bar", "name": "SIEVE", "color": "#7f7f7f", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6054, 0.6775, 0.7144, 0.7581]},
+        {"type": "bar", "name": "S3-FIFO", "color": "#2ca02c", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.5914, 0.6504, 0.6962, 0.7564]},
+        {"type": "bar", "name": "S4-FIFO", "color": "#00611f", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6042, 0.6859, 0.7199, 0.7586]},
+        {"type": "bar", "name": "LIRS", "color": "#17becf", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6249, 0.6801, 0.6926, 0.734]},
+        {"type": "bar", "name": "LHD", "color": "#ff7f0e", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6399, 0.7052, 0.7299, 0.7597]},
+        {"type": "bar", "name": "LFU", "color": "#8c564b", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.3776, 0.3818, 0.3872, 0.4353]},
+        {"type": "bar", "name": "W-TinyLFU", "color": "#4b5563", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.5452, 0.6138, 0.6204, 0.552]},
+        {"type": "bar", "name": "LeCaR", "color": "#1f77b4", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6333, 0.7005, 0.7273, 0.7596]},
+        {"type": "bar", "name": "3LCache", "color": "#393b79", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6304, 0.6967, 0.7259, 0.7578]},
+        {"type": "bar", "name": "LRB", "color": "#800000", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6061, 0.6811, 0.7199, 0.7512]},
+        {"type": "bar", "name": "Workload-aware", "color": "#e377c2", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6258, 0.6965, 0.7235, 0.7568]},
+        {"type": "bar", "name": "AsymCache", "color": "#aec7e8", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.6345, 0.7018, 0.7269, 0.7587]},
+        {"type": "bar", "name": "Belady (OPT)", "color": "#c8a400", "x": ["24 GiB", "48 GiB", "96 GiB", "1 TiB"], "y": [0.7142, 0.7473, 0.7601, 0.7689]}
       ],
       "layout": {
         "barmode": "group",
-        "xaxis": {"title": {"text": "Hit ratio vs. LRU (percentage points)"}, "range": [-12, 9], "dtick": 3, "zeroline": false},
-        "yaxis": {"categoryorder": "array", "categoryarray": ["ARC", "SIEVE", "S3-FIFO", "S4-FIFO", "LIRS", "LHD", "LFU", "W-TinyLFU", "LeCaR", "LRB", "3LCache", "Workload-aware", "AsymCache", "Belady"]},
-        "shapes": [{"type": "line", "x0": 0, "x1": 0, "yref": "paper", "y0": 0, "y1": 1, "layer": "between", "line": {"color": "#1f2328", "width": 1.5}}]
+        "bargap": 0.25,
+        "bargroupgap": 0.05,
+        "xaxis": {"title": {"text": "Cache size"}},
+        "yaxis": {"title": {"text": "Block hit ratio"}, "range": [0.35, 0.8], "dtick": 0.1},
+        "shapes": [{"type": "rect", "xref": "x", "yref": "paper", "x0": -0.5, "x1": 2.5, "y0": 0, "y1": 1, "fillcolor": "#2a78d6", "opacity": 0.05, "line": {"width": 0}, "layer": "below"}]
       }
     }
     {{< /plotly >}}
@@ -100,11 +135,11 @@ Across this grid, no online algorithm reliably outperforms default LRU.
 
 **Quick-demotion algorithms are trace-dependent.** Algorithms that quickly discard one-hit items match LRU on some distributions, but fall behind on others: S3-FIFO is 1.0 point above LRU at 24 GiB on FreeInference while being 5.2 points below LRU at 48 GiB on Chutes. SIEVE, S4-FIFO, and LIRS behave the same way.
 
-**Frequency-based algorithms collapse.** Explicit frequency ranking fails catastrophically on prefix caches: LFU falls 38.2 points below LRU at 96 GiB on FreeInference, dropping completely off the scale of the figure.
+**Frequency-based algorithms collapse.** Explicit frequency ranking fails catastrophically on prefix caches: LFU falls 38.2 points below LRU at 96 GiB on FreeInference, 0.535 against 0.918, and it is the one row of the figure that is visibly short at every cache size on both traces.
 
 **The gap to Belady is large and is widest in a tight cache.** Belady's offline optimum beats LRU by 8.1 points on FreeInference in the smallest cache. Better replacement decisions exist in capacity-constrained regimes, but existing online heuristics fail to capture them.
 
-## What makes a prefix cache different
+## What makes a prefix cache different?
 
 The prefix-cache workload has structural properties that classic eviction algorithms do not model. This part measures them, and they explain why the algorithms above do no better than recency alone.
 
