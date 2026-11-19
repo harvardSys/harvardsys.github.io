@@ -131,25 +131,28 @@ Across this grid, no online algorithm reliably outperforms default LRU.
 </div>
 {{< /diagram >}}
 
-**Most algorithms reproduce LRU.** Six of them, ARC, LHD, LeCaR, 3LCache, Workload-aware and AsymCache, stay within 1.3 points of LRU at every evaluated cache size on both traces; LRB is the learned algorithm that is clearly worse, 4.9 points below LRU at 48 GiB on FreeInference. The largest gain any online algorithm achieves over LRU anywhere in the grid is +1.28 points by LHD on FreeInference.
+**Most algorithms is just close to LRU.** Six algorithms, including ARC, LHD, LeCaR, 3LCache, Workload-aware, and AsymCache, stay within 1.3 percentage points of LRU at every evaluated cache size on both traces. Across the entire grid, the largest gain any online algorithm achieves over LRU is just +1.28 points (by LHD on FreeInference). Meanwhile, the learned policy LRB falls up to 4.9 points behind LRU.
 
-**Quick-demotion algorithms are trace-dependent.** Algorithms that quickly discard one-hit items match LRU on some distributions, but fall behind on others: S3-FIFO is 1.0 point above LRU at 24 GiB on FreeInference while being 5.2 points below LRU at 48 GiB on Chutes. SIEVE, S4-FIFO, and LIRS behave the same way.
+**Quick-demotion algorithms are trace-dependent.** Policies designed to quickly evict one-hit items (S3-FIFO, S4-FIFO, SIEVE, and LIRS) match LRU on some workloads but fall behind on others. For example, S3-FIFO outperforms LRU by 1.0 point at 24 GiB on FreeInference, but drops 5.2 points below LRU at 48 GiB on Chutes.
 
-**Frequency-based algorithms collapse.** Explicit frequency ranking fails catastrophically on prefix caches: LFU falls 38.2 points below LRU at 96 GiB on FreeInference, 0.535 against 0.918, and it is the one row of the figure that is visibly short at every cache size on both traces.
+**Frequency-based algorithms collapse.** Ranking by frequency (access count) fails catastrophically on prefix workloads. Plain LFU drops up to 38.2 points below LRU on FreeInference (0.535 vs. 0.918 at 96 GiB) and is the one bar visibly collapsed across every cache size on both traces. Even modern frequency architectures like W-TinyLFU struggle, lagging LRU by up to 17.0 points on FreeInference and over 20 points on Chutes.
 
-**The gap to Belady is large and is widest in a tight cache.** Belady's offline optimum beats LRU by 8.1 points on FreeInference in the smallest cache. Better replacement decisions exist in capacity-constrained regimes, but existing online heuristics fail to capture them.
+**Belady proves substantial headroom exists in tight caches.** Belady's offline optimum beats LRU by 8.1 points at 24 GiB on FreeInference. Significantly better replacement decisions exist when capacity is constrained, but existing online heuristics completely fail to unlock them.
 
 ## What makes a prefix cache different?
 
-The prefix-cache workload has structural properties that classic eviction algorithms do not model. This part measures them, and they explain why the algorithms above do no better than recency alone.
+The prefix-cache workload has fundamental structural properties that classical eviction algorithms never anticipated. These properties explain why decades of replacement research fail to beat simple recency.
 
 ### Sessions set the pace
 
-Prefix reuse comes almost entirely from the next turn of an active session. When a user interacts with a model or an agent executes a tool loop, requests arrive at a steady, regular pace set by tool calls and typing, and the intervals have low variance: median intra-session reuse interval is 8.2 seconds, and 99.7% of reuse gaps are under 22 minutes. Across block types, median reuse intervals are 10.0 seconds for system prompts and 11.2 seconds for multi-turn history, with 99th percentiles of 1,000 seconds and 562 seconds.
+Prefix reuse comes almost entirely from the next turn of an active session. When a human chats with a model or an agent executes a tool loop, requests arrive at a steady, predictable rhythm governed by typing and tool execution:
+- **Reuse intervals are remarkably short:** The median intra-session reuse interval is just 8.2 seconds, and 99.7% of reuse gaps are under 22 minutes. System prompts (10.0s median) and conversation history (11.2s median) follow nearly identical cadences.
+- **Lifetimes are strictly session-bounded:** In FreeInference, the median session lasts 55 seconds, and 90% finish within 14 minutes. Once a session ends, its conversational blocks are dead—they are never accessed again.
+- **Over half of all blocks are one-hit wonders:** 53.0% of unique blocks are accessed exactly once. For the blocks that *are* reused, 77.7% finish their entire lifecycle within 30 minutes.
 
-Lifetimes are session-bounded. Over multi-turn sessions in FreeInference, median session duration is 55 seconds, the 90th percentile is 14 minutes, and the 99th percentile is about 4 hours. When a session ends, its conversational blocks are never touched again. In FreeInference, 53.0% of distinct blocks are accessed exactly once, so their lifetime is zero. Of the blocks reused at least once, 77.7% have a lifetime under 30 minutes. Measured over all distinct blocks of each trace, the 90th-percentile block lifetime is 2,000 seconds (33 minutes) on FreeInference, compared to 307,000 seconds (3.6 days) on the CloudPhysics block-storage trace and 1.54 million seconds (17.8 days) on the Wikipedia 2019 web trace. Recency works because a recent access reliably indicates an ongoing session.
+This stands in stark contrast to traditional systems. In FreeInference, the 90th-percentile block lifetime is 33 minutes (2,000 seconds). On CloudPhysics block storage, it is 3.6 days; on Wikipedia web caching, it is 17.8 days. Reuse intervals show the same gulf: the 90th-percentile reuse interval is 65 seconds in prefix caching, versus 25 hours on Wikipedia and 3.6 days on block storage. 
 
-Reuse intervals show the same contrast. On FreeInference, the 90th-percentile reuse interval is 64.9 seconds and the 99th percentile is 729 seconds (12 minutes), compared to a 90th percentile of 91,700 seconds (25 hours) on Wikipedia and 307,000 seconds (3.6 days) on CloudPhysics.
+Plain LRU works so well because recency is an almost perfect proxy for whether a session is currently alive.
 
 {{< diagram size="large" caption="*Figure 2.* Object lifetime and reuse interval, as cumulative distributions over the prefix cache (FreeInference), a block-storage trace (CloudPhysics) and a web trace (Wikipedia 2019). The prefix-cache 90th-percentile lifetime is 2,000 seconds, against 3.6 days for block storage and 17.8 days for web; its 90th-percentile reuse interval is 64.9 seconds, against 25 hours for web and 3.6 days for block storage. Every curve starts at the share of objects accessed exactly once, which is similar across the three (53.0%, 54.1%, 56.1%)." >}}
 <div class="fig-legend">
@@ -199,9 +202,11 @@ Reuse intervals show the same contrast. On FreeInference, the 90th-percentile re
 
 ### Frequency measures the past, not the next turn
 
-Frequency fails as an eviction ranking key because access counts measure past session progress rather than when the next turn arrives. Turn arrival is paced by typing and tool calls. A block accessed 20 times and one accessed 3 times are equally likely to be touched in the next ten seconds. On web and block traces, higher frequency predicts a shorter reuse interval: the median falls across five orders of magnitude on Wikipedia (from 460,000 seconds down to 2.6 seconds) and from 250,000 seconds down to under a second on CloudPhysics. On the prefix cache, the median reuse interval is flat between 8.7 and 15.8 seconds across every frequency bin from 2 to 13,000 accesses, with the 25th-to-75th percentile band remaining between 4.7 and 29 seconds. LFU retains blocks from completed sessions and starves active ones.
+Frequency fails as an eviction ranking key because access counts measure past conversation length, not when the next turn will arrive. 
 
-Frequency is useful only for deciding what to admit, and the blocks that are never reused are the ones to keep out. The probability that a block is reused again jumps from 69.4% after its first access to 88.7% after its second, and stays above 92% from four accesses onward. On the web trace, the reuse probability starts at 43.5% and rises gradually to 80.4% after four accesses; on block storage, it drops from 24.7% to 4.1% before rising unevenly. Frequency can filter single-turn prompts before they consume long-term cache capacity.
+Because request arrivals are paced by human typing or tool execution, a block accessed 20 times is no more urgent than a block accessed 3 times—both are equally likely to be requested again in the next ten seconds. In traditional web and storage workloads, higher frequency strongly predicts shorter reuse intervals (falling by five orders of magnitude on Wikipedia). In prefix caching, the median reuse interval is dead flat between 8.7 and 15.8 seconds across every frequency bin, from 2 accesses all the way to 13,000. LFU fails because it clings to blocks from long, completed sessions while evicting freshly active ones.
+
+Where frequency *does* help is admission filtering: keeping out blocks that will never be reused. In FreeInference, the probability that a block is reused again jumps from 69.4% after its first access to 88.7% after its second, and stabilizes above 92% from four accesses onward. Frequency cannot tell you what to evict, but it can filter out transient, single-turn prompts before they consume valuable GPU memory.
 
 {{< diagram size="large" caption="*Figure 3.* Median reuse interval against frequency, and the probability of another reuse against the accesses a block has had so far. On FreeInference the median reuse interval is flat between 8.7 and 15.8 seconds across every frequency bin, while on the web trace it falls from 460,000 seconds to 2.6 seconds. Reuse probability on FreeInference jumps from 69.4% after one access to 88.7% after two. Three block-storage bins sit on the panel's floor, which is that trace's one-second timestamp resolution." >}}
 <div class="fig-legend">
@@ -257,19 +262,24 @@ Frequency is useful only for deciding what to admit, and the blocks that are nev
 
 ### Misses do not all cost the same
 
-Everything up to this point has been evaluated by hit ratio, assuming that every cache miss costs the same. But in a prefix cache, deeper blocks cost far more to recompute than shallow ones. Each uncached token attends to all earlier tokens in full-attention layers, including cached ones, so recomputing a block behind a long prefix requires far more compute. Two algorithms with the same hit ratio can cost different amounts of compute and different TTFT.
+Hit ratio assumes every cache miss costs the same. In LLM prefix caching, that assumption is fundamentally broken.
 
-We evaluate eviction with the compute-savings ratio: TFLOPs saved by hits divided by total TFLOPs, under a cost model for Qwen3-Coder-30B. Hit ratio is the special case where every block costs the same. Belady is no longer optimal under compute savings.
+Because attention scales with sequence length, deeper tokens cost far more compute to prefill than shallow ones. Recomputing a block at token position 60,000 requires attending across the entire preceding context; recomputing a block at position 100 costs almost nothing. As a result, two eviction policies with identical hit ratios can produce vastly different GPU compute requirements and Time to First Token (TTFT).
 
-Differentiating recomputation costs is possible because cache residency is separate from prefix matching. A cached block is reusable whenever its entire preceding token sequence matches the request. If an eviction algorithm drops blocks from the middle of a prefix, the engine recomputes only the missing blocks; deeper cached blocks after the gap remain hits. Eviction therefore does not have to work from the tail of a prefix. The cache can keep deep, expensive blocks and drop shallow, cheap ones.
+To capture this, we evaluate eviction using the **compute-savings ratio**: the TFLOPs saved by cache hits divided by total prefill TFLOPs (modeled on Qwen3-Coder-30B). Standard hit ratio is merely the special case where every block costs the same. Under compute savings, classical hit-optimal Belady is no longer optimal.
+
+Critically, serving engines can exploit this asymmetry because **cache residency is decoupled from prefix matching**. A cached block is reusable as long as its token sequence matches the prompt. If an eviction policy drops blocks from the *middle* of a prefix, the engine only needs to recompute the missing gap; deeper cached blocks after the gap remain valid hits. Eviction does not need to prune strictly from the tail—the cache can intentionally retain deep, expensive blocks while sacrificing cheap, shallow ones.
 
 **Takeaway:** Recomputation cost grows with prefix depth, and middle gaps can be recomputed while deeper cached blocks stay hits.
 
 ### A few sessions hold most of the bytes
 
-Session footprints are extremely skewed: the median session holds 45 blocks (0.07 GiB), while the top 10% of sessions hold 76.2% of all KV bytes, the top 1% hold 20.3%, and the largest single session reaches 234 GiB.
+KV cache memory consumption is extraordinarily skewed across sessions:
+- The **median session** consumes just 45 blocks (~0.07 GiB).
+- The **top 10% of sessions** consume **76.2%** of all KV bytes.
+- The **top 1% of sessions** consume **20.3%**, with the single largest session reaching 234 GiB.
 
-Plotting the concentration of KV bytes across sessions underscores this disparity: the curve sits far above the diagonal that equally sized sessions would produce, with the top 5% of sessions holding 56.3% of all KV bytes. The vast majority of sessions consume minimal memory, while a small tail of extended multi-turn interactions dominates the cache footprint.
+The vast majority of sessions are tiny and fleeting, while a heavy tail of extended agentic interactions consumes nearly the entire cache. This extreme concentration means the *granularity* an algorithm evicts in—whether it evicts individual blocks, contiguous chunks, or entire sessions—matters just as much as its eviction order.
 
 {{< diagram size="medium" caption="*Figure 4.* Share of all KV bytes held by the largest sessions on FreeInference, largest first. The dotted diagonal is what equally sized sessions would give: the top 1% of sessions hold 20.3% of all KV bytes, the top 5% hold 56.3%, and the top 10% hold 76.2%." >}}
 <div class="fig-legend">
@@ -296,13 +306,15 @@ Plotting the concentration of KV bytes across sessions underscores this disparit
 
 ## What actually helps
 
-Recency alone does not capture three workload properties: single-turn prompts that are never reused, misses that cost different amounts of compute depending on block depth, and session footprints skewed enough that the unit of eviction matters. Keep LRU as the base and add one signal only for whichever of these conditions a deployment actually encounters.
+Plain recency misses three specific workload dynamics: transient single-turn prompts that waste space, prefix depth asymmetries where misses cost different amounts of compute, and extreme footprint skew across sessions. 
+
+The practical rule of thumb is simple: **keep LRU as your baseline, and add specialized mechanisms only when your specific serving workload exhibits these conditions.**
 
 ### Quick demotion, when one-hit prompts flood the cache
 
-Quick-demotion algorithms like S3-FIFO isolate one-hit items in a probationary buffer to avoid flushing reusable state. On prefix workloads, this mechanism pays only under a narrow condition. Single-turn prompts are short, so a large volume must arrive before their footprint threatens capacity.
+Quick-demotion algorithms like S3-FIFO isolate new items in a probationary buffer to prevent one-hit wonders from evicting reusable cache state. In LLM serving, however, this mechanism only pays off under a very specific condition: single-turn prompts are short, so a massive volume of them must arrive simultaneously before their cumulative footprint threatens cache capacity.
 
-On FreeInference and Chutes, that volume threshold is not reached: quick demotion is roughly neutral on FreeInference, while on Chutes it costs 5.2 points of hit ratio at 48 GiB. It succeeds only when single-turn prompts heavily dominate the arrival stream.
+In conversational traces like FreeInference and Chutes, that volume threshold is never reached. Quick demotion is neutral on FreeInference and actually hurts Chutes (costing 5.2 points of hit ratio at 48 GiB). It helps only when single-turn prompts overwhelmingly dominate the incoming traffic.
 
 {{< diagram size="medium" caption="*Figure 5.* Block hit ratio on the Qwen To-B trace, where single-turn prompts dominate. Quick demotion is worth 8.8 points at 24 GiB and nothing at 1 TiB. Note the y axis starts at 0.35." >}}
 <div class="fig-legend">
@@ -326,13 +338,15 @@ On FreeInference and Chutes, that volume threshold is not reached: quick demotio
 </figure>
 {{< /diagram >}}
 
-On the single-turn dominated Qwen To-B trace at 24 GiB, quick demotion succeeds: LRU achieves a hit ratio of 0.403, while S3-FIFO reaches 0.492 and ARC reaches 0.491. S3-FIFO gains 8.8 points over LRU because transient prompts arrive quickly enough to evict active multi-turn prefixes under plain LRU. At 1 TiB, capacity eliminates this pressure, and all three algorithms perform within 0.4 points of each other.
+On the single-turn dominated Qwen To-B trace at 24 GiB, quick demotion clearly pays off: LRU achieves a 40.3% hit ratio, while S3-FIFO and ARC reach 49.2% and 49.1%—an 8.8 percentage-point gain. S3-FIFO wins here because transient prompts arrive fast enough to flush active multi-turn sessions under plain LRU. At 1 TiB, ample capacity eliminates this cache pressure, and all three algorithms converge within 0.4 points of each other.
 
 **Takeaway:** Quick demotion delivers gains only when high volumes of short, single-turn prompts threaten to displace active multi-turn prefixes in small caches.
 
 ### Compute-aware eviction, in contiguous chunks
 
-Compute-aware eviction ranks blocks by what they cost to recompute rather than by whether they are hit. The exact theoretical ceiling is computable: the offline optimum is an integer linear program (ILP) over reuse intervals with cache capacity as the constraint. BeladyCompute is a close offline heuristic that evicts the block with the highest product of compute intensity and time until next access. RandomCompute is the online version: it samples a few blocks and evicts the one with the lowest ratio of compute intensity to time since last access, avoiding the cost of scoring every block.
+Compute-aware eviction ranks blocks by what they cost to recompute rather than simply whether they hit. 
+
+We can compute the exact theoretical ceiling: the offline optimum is formulated as an integer linear program (ILP) over reuse intervals subject to cache capacity. **BeladyCompute** is an offline heuristic that evicts blocks with the lowest product of compute intensity and time until next access. **RandomCompute** is its practical online counterpart: it samples a handful of candidate blocks and evicts the one with the lowest ratio of compute intensity to idle time, avoiding the prohibitive overhead of scoring every block in memory.
 
 {{< diagram size="large" caption="*Figure 6.* Compute-savings ratio on FreeInference under the Qwen3-Coder-30B cost model. Belady is not optimal here: BeladyCompute and the ILP optimum are 12.6 and 13.7 points above it at 24 GiB. Note the y axis starts at 0.5." >}}
 <div class="fig-legend">
@@ -362,11 +376,11 @@ Compute-aware eviction ranks blocks by what they cost to recompute rather than b
 </figure>
 {{< /diagram >}}
 
-At 24 GiB on FreeInference, LRU achieves a compute-savings ratio of 0.533. RandomCompute reaches 0.638, outperforming LRU by 10.4 points and surpassing hit-optimal Belady at 0.609. BeladyCompute reaches 0.735, tracking the offline optimum of 0.746 within 1.03 points at 24 GiB, 0.41 at 48 GiB, and 0.08 at 96 GiB. The Belady-to-BeladyCompute gap bounds what compute-awareness can buy: 12.6 points at 24 GiB on FreeInference, but at most 1.1 points across the other five traces evaluated. At 1 TiB, all six configurations converge within 0.2 points of each other.
+At 24 GiB on FreeInference, LRU achieves a compute-savings ratio of 0.533. RandomCompute reaches 0.638—beating LRU by 10.4 percentage points and even outperforming hit-optimal Belady (0.609). BeladyCompute reaches 0.735, closely tracking the theoretical offline optimum of 0.746. Compute-awareness buys up to 12.6 points of compute savings on FreeInference in constrained caches, though all configurations converge within 0.2 points at 1 TiB.
 
-Scoring is only half of the technique. Sampling scatters evictions across prefixes, and the gaps it leaves cost more than the scoring saves. At 24 GiB on FreeInference, block-granular RandomCompute leaves 9.21 holes per request on average, and 143 at the 99th percentile.
+However, scoring blocks is only half the battle. Because sampled scoring evaluates blocks independently, it scatters evictions randomly across prefixes. At 24 GiB, block-granular RandomCompute leaves an average of 9.2 holes per request (and 143 holes at the 99th percentile), turning prefixes into Swiss cheese.
 
-Partial-node eviction fixes this fragmentation. Instead of removing scattered blocks, one chosen node evicts its first k contiguous blocks. This yields 8.7x fewer holes while preserving compute savings: 0.636 for PartialNode RandomCompute versus 0.638 for block-granular RandomCompute at 24 GiB. Because the recomputed segments have no dependencies between them, their prefills can be batched in parallel. The chunk k can be sized to the engine's batching token budget.
+**Partial-node eviction solves this fragmentation.** Instead of evicting isolated blocks, the engine selects a node and evicts a contiguous chunk of its first k blocks. This cuts holes by 8.7x while preserving virtually all compute savings (0.636 vs 0.638). Even better, because the missing recomputed segments have no interdependencies, their prefills can be batched efficiently in parallel. The chunk size k can be tuned directly to the engine's batch token budget.
 
 {{< diagram size="large" caption="*Figure 7.* End-to-end on an H200 with a 48 GiB cache, 10,000 requests from FreeInference. TTFT and throughput were measured in separate runs. Lower is better on the left, higher is better on the right." >}}
 <div class="fig-legend">
@@ -408,21 +422,19 @@ Partial-node eviction fixes this fragmentation. Instead of removing scattered bl
 </div>
 {{< /diagram >}}
 
-End-to-end tests confirm the penalty of fragmentation. On an NVIDIA H200 GPU running vLLM with Qwen3-Coder-30B, a 48 GiB cache, and 10,000 FreeInference requests (measuring TTFT and throughput in separate runs), block-granular RandomCompute collapsed: average TTFT was 5,240.8 ms (4.0x LRU's 1,293.7 ms), and prefill throughput fell to 14,043 tokens/s (3.9x lower than LRU's 55,176 tokens/s).
+End-to-end benchmarks on real hardware confirm the severe penalty of prefix fragmentation. On an NVIDIA H200 GPU running vLLM with Qwen3-Coder-30B, a 48 GiB cache, and 10,000 FreeInference requests, block-granular RandomCompute completely collapsed: average TTFT surged to 5,241 ms (4.0x slower than LRU's 1,294 ms), and prefill throughput fell by nearly 4x (14,043 vs. 55,176 tokens/s).
 
-PartialNode resolves the issue: it cuts average TTFT by 19.9% to 1,036.5 ms and raises prefill throughput by 18.8% to 65,569 tokens/s over LRU. Median TTFT increases from 112 ms under LRU to 171 ms under PartialNode, but 99th percentile TTFT falls from 26.0 seconds to 16.8 seconds.
+PartialNode resolves this completely: it reduces average TTFT by 19.9% (down to 1,037 ms) and raises prefill throughput by 18.8% (up to 65,569 tokens/s) over LRU. While median TTFT slightly increases (from 112 ms to 171 ms), tail latency improves dramatically: 99th-percentile TTFT drops from 26.0 seconds down to 16.8 seconds.
 
 **Takeaway:** Ranking blocks by recompute cost beats hit-optimal eviction on long sequences, but only when the blocks it drops are contiguous: scattered evictions fragment prefixes and cost more in throughput and tail latency than the scoring saves.
 
 ### Match granularity to the memory tier
 
-Partial-node eviction establishes that evictions must be contiguous. That shifts the focus from ranking to the unit of eviction: partial-node eviction asks how large a contiguous chunk of blocks to drop, while a coarser alternative, session-level eviction, asks whether the unit should be a block or a whole session.
+Partial-node eviction demonstrates that evictions must be contiguous. This shifts the central systems question from *how to rank* to *what unit to evict*.
 
-Tracking fine-grained blocks incurs heavy metadata overhead at scale: a 12 TiB secondary pool holds 8.4 million 16-token blocks. Evicting entire sessions saves metadata, but viability depends on the memory tier.
-
-Because session footprints are so heavily skewed, session-level eviction fails in GPU HBM: the cache cannot partially trim huge sessions, and dropping a session purges shared system prompts used by other active sessions. At 24 GiB, session-level eviction costs LRU 10.5 points in hit ratio and costs RandomCompute 18.7 points in compute savings; at 48 GiB, the losses are 3.3 and 5.5 points.
-
-In a global memory pool, this difference is unmeasurable because the pool easily absorbs large sessions. Production pool systems like Mooncake and LMCache operate in 256 to 512-token chunks, 16 to 32 times coarser than a block, for this metadata reason.
+Tracking fine-grained 16-token blocks incurs enormous metadata overhead at cluster scale: a 12 TiB secondary memory pool holds over 8.4 million blocks. Evicting at the granularity of entire sessions would eliminate this metadata tracking, but its viability depends entirely on the memory tier:
+- **In GPU HBM, session-level eviction fails.** Because session footprints are heavily skewed, an engine cannot partially trim oversized sessions. Worse, dropping an entire session purges shared system prompts relied upon by other active users. At 24 GiB, session-level eviction degrades LRU's hit ratio by 10.5 points and slashes RandomCompute's savings by 18.7 points.
+- **In global secondary pools, session-level eviction is virtually free.** Large multi-terabyte pools easily absorb huge sessions without eviction thrashing. This is why production pool architectures like Mooncake and LMCache operate on much coarser chunks (256 to 512 tokens, 16–32x larger than an HBM block) to keep metadata overhead negligible.
 
 **Takeaway:** Use fine-grained contiguous block eviction in GPU HBM to avoid eviction penalties on skewed session footprints, and use coarse eviction in secondary pools to eliminate metadata overhead.
 
@@ -445,4 +457,4 @@ If running quick demotion and compute-awareness together, apply compute-aware sc
 - **Traces:** [huggingface.co/datasets/harvardMadsys/2026_prefixcache](https://huggingface.co/datasets/harvardMadsys/2026_prefixcache) (CC BY 4.0), as `freeinference.lcp.zst` and `chutes.lcp.zst`
 - **Paper:** [When Fancy Eviction Fails: Rethinking Cache Replacement For LLM Prefix Reuse](https://arxiv.org/abs/2609.28870)
 
-The traces carry per-block identity scoped across sessions, which is what prefix-cache eviction research needs and what existing public datasets lack; we would like to hear what people find.
+These traces provide per-block identities scoped across sessions—a critical requirement for prefix cache eviction research that previous public datasets lacked. We encourage the systems and ML community to experiment with them and share their findings.
